@@ -1,135 +1,145 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, ArrowRight, FileText, Brain, Shield } from 'lucide-react';
+import { ArrowRight, Brain, Shield, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import { candidateApi } from '@/lib/api';
+import ResumeUpload from '@/components/molecules/ResumeUpload';
+import { Card, CardContent } from '@/components/ui/card';
+
+interface CandidateData {
+  email: string;
+  resume_url?: string;
+  resume_filename?: string;
+  resume_uploaded_at?: string;
+}
 
 export default function CandidateHome() {
   const navigate = useNavigate();
-  const [isDragging, setIsDragging] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [candidateData, setCandidateData] = useState<CandidateData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Check authentication on mount
-  useEffect(() => {
-    const checkAuth = async () => {
+  const fetchCandidateData = async () => {
+    try {
       const result = await candidateApi.verifyToken();
       if (!(result.data as any)?.valid) {
         navigate('/candidate/login');
+        return;
       }
-    };
-    checkAuth();
-  }, [navigate]);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile?.type === 'application/pdf') {
-      setFile(droppedFile);
+      setCandidateData((result.data as any).user);
+    } catch (error) {
+      console.error('Failed to fetch candidate data:', error);
+      navigate('/candidate/login');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-    }
-  };
+  // Check authentication on mount
+  useEffect(() => {
+    fetchCandidateData();
+  }, []);
 
   const handleStartAssessment = () => {
-    // TODO: Upload file and get assessment ID from backend
+    if (!candidateData?.resume_url) {
+      alert('Please upload your resume before starting the assessment');
+      return;
+    }
+    // TODO: Start assessment with uploaded resume
     navigate('/assessment/demo-123');
   };
 
+  const handleUploadSuccess = () => {
+    // Refresh candidate data after successful upload
+    fetchCandidateData();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 animate-fade-in">
-      <div className="max-w-2xl w-full space-y-8 text-center">
-        {/* Hero */}
-        <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-            <Brain className="h-4 w-4" />
-            AI-Powered Evaluation
+    <div className="flex-1 p-6 animate-fade-in">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Welcome back!</h1>
+              <p className="text-muted-foreground">{candidateData?.email}</p>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Your skills,{' '}
-            <span className="gradient-text">fairly evaluated</span>
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-md mx-auto">
-            Upload your resume and complete a personalized assessment tailored to
-            your experience and the role you're applying for.
-          </p>
         </div>
 
-        {/* Upload Area */}
-        <Card
-          className={cn(
-            'p-8 border-2 border-dashed transition-smooth cursor-pointer',
-            isDragging
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-primary/50'
-          )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => document.getElementById('file-input')?.click()}
-        >
-          <input
-            id="file-input"
-            type="file"
-            accept=".pdf"
-            className="hidden"
-            onChange={handleFileSelect}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Resume Upload Section */}
+          <ResumeUpload
+            currentResume={
+              candidateData?.resume_url
+                ? {
+                    filename: candidateData.resume_filename || 'resume.pdf',
+                    url: candidateData.resume_url,
+                    uploadedAt: candidateData.resume_uploaded_at || new Date().toISOString(),
+                  }
+                : undefined
+            }
+            onUploadSuccess={handleUploadSuccess}
           />
 
-          {file ? (
-            <div className="flex items-center justify-center gap-3">
-              <FileText className="h-8 w-8 text-primary" />
-              <div className="text-left">
-                <p className="font-medium">{file.name}</p>
+          {/* Assessment Section */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold mb-4">Assessment</h3>
+              
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                  <Brain className="h-4 w-4" />
+                  AI-Powered Evaluation
+                </div>
+                
                 <p className="text-sm text-muted-foreground">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                  Complete a personalized assessment tailored to your experience and 
+                  the role you're applying for. Make sure to upload your resume first.
                 </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium">Drop your resume here</p>
-                <p className="text-sm text-muted-foreground">
-                  or click to browse (PDF only)
-                </p>
-              </div>
-            </div>
-          )}
-        </Card>
 
-        {/* CTA */}
-        <Button
-          size="lg"
-          className="gap-2"
-          disabled={!file}
-          onClick={handleStartAssessment}
-        >
-          Start Assessment
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-medium text-sm">Assessment Features:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Personalized coding problems</li>
+                    <li>• Real-time code evaluation</li>
+                    <li>• Webcam proctoring</li>
+                    <li>• Detailed feedback</li>
+                  </ul>
+                </div>
+
+                <Button
+                  size="lg"
+                  className="w-full gap-2"
+                  disabled={!candidateData?.resume_url}
+                  onClick={handleStartAssessment}
+                >
+                  Start Assessment
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+
+                {!candidateData?.resume_url && (
+                  <p className="text-xs text-center text-amber-600">
+                    ⚠️ Please upload your resume to start the assessment
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Trust Badges */}
-        <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground pt-4">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Secure & Private

@@ -7,3 +7,4 @@ PyJWT
 groq
 pandas
 openpyxl
+supabase

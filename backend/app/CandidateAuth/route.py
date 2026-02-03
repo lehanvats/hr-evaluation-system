@@ -205,12 +205,24 @@ def verify_token():
                     'message': 'Invalid token type'
                 }), 401
             
-            # Return success with user information from token
+            # Get user from database to include resume info
+            candidate = CandidateAuthModel.query.get(payload.get('user_id'))
+            
+            if not candidate:
+                return jsonify({
+                    'valid': False,
+                    'message': 'User not found'
+                }), 404
+            
+            # Return success with user information including resume
             return jsonify({
                 'valid': True,
                 'user': {
-                    'id': payload.get('user_id'),
-                    'email': payload.get('email')
+                    'id': candidate.id,
+                    'email': candidate.email,
+                    'resume_url': candidate.resume_url,
+                    'resume_filename': candidate.resume_filename,
+                    'resume_uploaded_at': candidate.resume_uploaded_at.isoformat() if candidate.resume_uploaded_at else None
                 }
             }), 200
             

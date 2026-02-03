@@ -62,7 +62,13 @@ They will provide you with a connection string.
 
    # JWT Configuration
    JWT_EXP_MINUTES=1440
+
+   # Supabase Configuration (for resume uploads)
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_KEY=your_supabase_anon_key
    ```
+
+   **Note:** For resume upload feature to work, you need to set up Supabase storage. See [RESUME_UPLOAD_GUIDE.md](RESUME_UPLOAD_GUIDE.md) for details.
 
 4. **Install Python dependencies:**
 

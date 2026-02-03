@@ -38,11 +38,39 @@ def create_app():
     # Recruiter dashboard routes (separate from auth)
     from .RecruiterDashboard import RecruiterDashboard
     app.register_blueprint(RecruiterDashboard, url_prefix='/api/recruiter')
+    
+    # Resume management routes
+    from .Resume import Resume
+    app.register_blueprint(Resume, url_prefix='/api/resume')
 
     # Import models before creating tables
     from . import models
     
     with app.app_context():
+        # Create all tables
         db.create_all()
+        
+        # Add resume columns to existing candidate_auth table if they don't exist
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        
+        # Check if candidate_auth table exists
+        if 'candidate_auth' in inspector.get_table_names():
+            existing_columns = [col['name'] for col in inspector.get_columns('candidate_auth')]
+            
+            # Add missing resume columns
+            if 'resume_url' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN resume_url VARCHAR(500)"))
+                print("✅ Added resume_url column to candidate_auth")
+            
+            if 'resume_filename' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN resume_filename VARCHAR(255)"))
+                print("✅ Added resume_filename column to candidate_auth")
+            
+            if 'resume_uploaded_at' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN resume_uploaded_at TIMESTAMP"))
+                print("✅ Added resume_uploaded_at column to candidate_auth")
+            
+            db.session.commit()
 
     return app
