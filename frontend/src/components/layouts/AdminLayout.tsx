@@ -91,7 +91,7 @@ export function AdminLayout() {
         {/* Top Bar */}
         <header className="h-14 border-b border-border/50 flex items-center justify-between px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="flex items-center gap-4">
-            <h1 className="text-sm font-medium  onClick={handleLogout} title="Logout"text-muted-foreground">
+            <h1 className="text-sm font-medium text-muted-foreground">
               HR Evaluation System
             </h1>
           </div>
@@ -101,7 +101,7 @@ export function AdminLayout() {
               <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
