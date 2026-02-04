@@ -135,6 +135,12 @@ export function PsychometricConfigDialog({ recruiterId, onConfigSaved }: Psychom
     setSuccess('');
 
     // Validation
+    if (numQuestions < 15) {
+      setError('Minimum 15 questions are required for a valid psychometric assessment');
+      setLoading(false);
+      return;
+    }
+
     if (selectionMode === 'manual' && selectedQuestionIds.length !== numQuestions) {
       setError(`Please select exactly ${numQuestions} questions`);
       setLoading(false);
@@ -207,20 +213,25 @@ export function PsychometricConfigDialog({ recruiterId, onConfigSaved }: Psychom
               <Input
                 id="numQuestions"
                 type="number"
-                min="10"
+                min="15"
                 max="50"
                 value={numQuestions}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
-                  setNumQuestions(val);
-                  // Reset selection if exceeding new limit
-                  if (selectedQuestionIds.length > val) {
-                    setSelectedQuestionIds(selectedQuestionIds.slice(0, val));
+                  if (val >= 15 && val <= 50) {
+                    setNumQuestions(val);
+                    // Reset selection if exceeding new limit
+                    if (selectedQuestionIds.length > val) {
+                      setSelectedQuestionIds(selectedQuestionIds.slice(0, val));
+                    }
+                    setError('');
+                  } else if (val < 15) {
+                    setError('Minimum 15 questions are required for a valid psychometric assessment');
                   }
                 }}
               />
               <p className="text-sm text-muted-foreground">
-                Choose between 10-50 questions (default: 50)
+                Choose between 15-50 questions (minimum: 15, default: 50)
               </p>
             </div>
 

@@ -152,6 +152,19 @@ def set_test_configuration():
                 'error': 'recruiter_id is required'
             }), 400
         
+        # Validate number of questions
+        if num_questions < 15:
+            return jsonify({
+                'success': False,
+                'error': 'Minimum 15 questions are required for a valid psychometric assessment'
+            }), 400
+        
+        if num_questions > 50:
+            return jsonify({
+                'success': False,
+                'error': 'Maximum 50 questions allowed'
+            }), 400
+        
         # Validate selection mode
         if selection_mode not in ['random', 'manual']:
             return jsonify({
