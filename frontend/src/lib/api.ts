@@ -240,15 +240,23 @@ export const mcqApi = {
 export const psychometricApi = {
   /** Load questions into database (one-time setup) */
   loadQuestions: async () => {
+    const token = localStorage.getItem('recruiter_token');
     return request('/api/psychometric/load-questions', {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
     });
   },
 
   /** Get all psychometric questions (for recruiter) */
   getAllQuestions: async () => {
+    const token = localStorage.getItem('recruiter_token');
     return request('/api/psychometric/questions/all', {
       method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
     });
   },
 
@@ -256,8 +264,12 @@ export const psychometricApi = {
   setConfig: async (recruiterId: number, numQuestions: number, selectionMode: 'random' | 'manual', selectedQuestionIds?: number[]) => {
     // recruiterId parameter kept for backwards compatibility but not sent to backend
     // Backend extracts recruiter_id from JWT token
+    const token = localStorage.getItem('recruiter_token');
     return request('/api/psychometric/config/set', {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify({
         num_questions: numQuestions,
         selection_mode: selectionMode,
@@ -270,8 +282,12 @@ export const psychometricApi = {
   getCurrentConfig: async (recruiterId: number) => {
     // recruiterId parameter kept for backwards compatibility but not sent to backend
     // Backend extracts recruiter_id from JWT token
+    const token = localStorage.getItem('recruiter_token');
     return request('/api/psychometric/config/current', {
       method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
     });
   },
 

@@ -256,8 +256,19 @@ def upload_mcq_questions():
                 'success': False,
                 'message': f'Missing columns: {", ".join(missing_columns)}'
             }), 400
-        
-        # Process questions
+                # Delete all existing MCQ questions before inserting new ones
+        # Note: MCQ doesn't have an answers table, candidate selections are stored in CandidateAuth.mcq_score
+        try:
+            deleted_count = MCQQuestion.query.delete()
+            db.session.commit()
+            print(f"\n✅ Deleted {deleted_count} existing MCQ questions")
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error deleting existing questions: {str(e)}'
+            }), 500
+                # Process questions
         results = {
             'total': len(df),
             'created': 0,
@@ -323,7 +334,7 @@ def upload_mcq_questions():
                 existing = MCQQuestion.query.filter_by(question_id=question_id).first()
                 
                 if existing:
-                    # Update existing
+                    # Update existing (shouldn't happen since we deleted all, but keep for safety)
                     existing.question = question
                     existing.option1 = option1
                     existing.option2 = option2

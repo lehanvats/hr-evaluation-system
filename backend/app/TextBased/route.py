@@ -408,6 +408,21 @@ def upload_text_based_questions():
                 'message': f'Missing required columns: {", ".join(missing_columns)}'
             }), 400
         
+        # Delete all existing text-based answers and questions before inserting new ones
+        try:
+            # First delete all answers (foreign key constraint)
+            deleted_answers = TextBasedAnswer.query.delete()
+            # Then delete all questions
+            deleted_questions = TextBasedQuestion.query.delete()
+            db.session.commit()
+            print(f"\n✅ Deleted {deleted_answers} existing text-based answers and {deleted_questions} questions")
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error deleting existing questions: {str(e)}'
+            }), 500
+        
         # Process questions
         results = {
             'total': len(df),
@@ -449,7 +464,7 @@ def upload_text_based_questions():
                 existing_question = TextBasedQuestion.query.filter_by(question_id=question_id).first()
                 
                 if existing_question:
-                    # Update existing question
+                    # Update existing question (shouldn't happen since we deleted all, but keep for safety)
                     existing_question.question = question_text
                     existing_question.updated_at = datetime.utcnow()
                     results['updated'] += 1

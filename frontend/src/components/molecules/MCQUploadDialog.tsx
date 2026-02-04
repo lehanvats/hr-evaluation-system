@@ -8,6 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
@@ -37,6 +47,7 @@ export default function MCQUploadDialog({
   const [uploadResults, setUploadResults] = useState<UploadResults | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const acceptedFileTypes = '.csv,.xlsx,.xls';
@@ -84,6 +95,16 @@ export default function MCQUploadDialog({
     if (e.target.files && e.target.files[0]) {
       handleFileSelect(e.target.files[0]);
     }
+  };
+
+  const handleUploadClick = () => {
+    if (!selectedFile) return;
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmUpload = async () => {
+    setShowConfirmDialog(false);
+    await handleUpload();
   };
 
   const handleUpload = async () => {
@@ -303,12 +324,34 @@ export default function MCQUploadDialog({
             {uploadResults ? 'Close' : 'Cancel'}
           </Button>
           {!uploadResults && (
-            <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
+            <Button onClick={handleUploadClick} disabled={!selectedFile || uploading}>
               {uploading ? 'Uploading...' : 'Upload'}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace All MCQ Questions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will <strong>permanently delete all existing MCQ questions</strong> and replace them with the questions from your file.
+              <br /><br />
+              <strong>⚠️ Warning:</strong> Any candidate answers to deleted questions will remain in the database but won't have corresponding questions.
+              <br /><br />
+              Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpload} className="bg-red-600 hover:bg-red-700">
+              Delete All & Upload
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

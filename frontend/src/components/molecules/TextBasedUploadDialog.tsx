@@ -6,6 +6,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, Upload, FileText, AlertCircle, Download } from 'lucide-react';
@@ -33,6 +43,7 @@ export default function TextBasedUploadDialog({
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -53,6 +64,16 @@ export default function TextBasedUploadDialog({
       setError(null);
       setUploadResult(null);
     }
+  };
+
+  const handleUploadClick = () => {
+    if (!selectedFile) return;
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmUpload = async () => {
+    setShowConfirmDialog(false);
+    await handleUpload();
   };
 
   const handleUpload = async () => {
@@ -219,7 +240,7 @@ export default function TextBasedUploadDialog({
           {/* Upload Button */}
           <div className="flex gap-2">
             <Button
-              onClick={handleUpload}
+              onClick={handleUploadClick}
               disabled={!selectedFile || uploading}
               className="flex-1"
             >
@@ -241,6 +262,28 @@ export default function TextBasedUploadDialog({
           </div>
         </div>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace All Questions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will <strong>permanently delete all existing text-based questions</strong> and replace them with the questions from your file.
+              <br /><br />
+              <strong>⚠️ Warning:</strong> Any candidate answers to deleted questions will remain in the database but won't have corresponding questions.
+              <br /><br />
+              Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpload} className="bg-red-600 hover:bg-red-700">
+              Delete All & Upload
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
