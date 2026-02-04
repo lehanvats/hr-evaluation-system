@@ -17,6 +17,7 @@ import { AssessmentQuestion } from '@/types/assessment';
 import { AssessmentRound, ROUND_CONFIGS, ROUND_ORDER, RoundProgress } from '@/types/rounds';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { mcqApi, candidateApi } from '@/lib/api';
 
 interface ConsoleLog {
   type: 'log' | 'error' | 'info' | 'success';
@@ -41,12 +42,59 @@ export default function Assessment() {
     psychometric: { round: 'psychometric', status: 'not-started', answers: {} },
     technical: { round: 'technical', status: 'not-started', answers: {} }
   });
+  const [loading, setLoading] = useState(true);
 
   // Question State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
+
+  // Check candidate status and round completion on mount
+  useEffect(() => {
+    const checkCandidateStatus = async () => {
+      try {
+        const result = await candidateApi.verifyToken();
+        
+        if (result.error || !(result.data as any)?.valid) {
+          navigate('/candidate/login');
+          return;
+        }
+        
+        const candidateData = (result.data as any).user;
+        
+        // Determine which round should be active based on completion status
+        let activeRound: AssessmentRound = 'mcq';
+        const updatedProgress = { ...roundProgress };
+        
+        if (candidateData.mcq_completed) {
+          updatedProgress.mcq.status = 'completed';
+          activeRound = 'psychometric';
+        }
+        
+        if (candidateData.psychometric_completed) {
+          updatedProgress.psychometric.status = 'completed';
+          activeRound = 'technical';
+        }
+        
+        if (candidateData.technical_completed) {
+          updatedProgress.technical.status = 'completed';
+          // All rounds completed, redirect to home
+          navigate('/candidate/home');
+          return;
+        }
+        
+        setRoundProgress(updatedProgress);
+        setCurrentRound(activeRound);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking candidate status:', error);
+        navigate('/candidate/login');
+      }
+    };
+    
+    checkCandidateStatus();
+  }, [navigate]);
 
   // Derived State
   const currentRoundQuestions = questionsByRound[currentRound];
@@ -99,7 +147,34 @@ export default function Assessment() {
     setIsRunning(false);
   };
 
-  const completeCurrentRound = () => {
+  const completeCurrentRound = async () => {
+    // If completing MCQ round, submit all answers to backend
+    if (currentRound === 'mcq') {
+      try {
+        addLog('info', 'Submitting MCQ answers...');
+        
+        // Prepare answers in the format backend expects
+        const answers = Object.entries(roundProgress.mcq.answers).map(([questionId, answer]) => ({
+          question_id: parseInt(questionId),
+          answer_option: answer
+        }));
+        
+        // Submit and lock the MCQ round
+        const result = await mcqApi.completeRound(answers);
+        
+        if (result.error) {
+          addLog('error', `Failed to submit MCQ answers: ${result.error}`);
+          console.error('MCQ submission error:', result.error);
+        } else {
+          addLog('success', `MCQ answers submitted successfully! Total: ${answers.length}`);
+          console.log('MCQ submission result:', result.data);
+        }
+      } catch (error) {
+        addLog('error', 'Error submitting MCQ answers');
+        console.error('MCQ submission error:', error);
+      }
+    }
+    
     setRoundProgress(prev => ({
       ...prev,
       [currentRound]: {
@@ -134,7 +209,7 @@ export default function Assessment() {
     }
   };
 
-  const handleSubmitQuestion = () => {
+  const handleSubmitQuestion = async () => {
     if (currentQuestion.type === 'coding') {
       handleRunCode();
     }
@@ -144,7 +219,7 @@ export default function Assessment() {
       handleNext();
     } else {
       // Round completed
-      completeCurrentRound();
+      await completeCurrentRound();
       addLog('success', `${currentRoundConfig.name} completed!`);
       
       // Show transition UI or automatically move to next round
@@ -190,6 +265,18 @@ export default function Assessment() {
 
     return props;
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading assessment...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-7rem)] animate-fade-in">

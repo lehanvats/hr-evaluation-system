@@ -42,6 +42,10 @@ def create_app():
     # Resume management routes
     from .Resume import Resume
     app.register_blueprint(Resume, url_prefix='/api/resume')
+    
+    # MCQ management routes
+    from .MCQ import MCQ
+    app.register_blueprint(MCQ, url_prefix='/api/mcq')
 
     # Import models before creating tables
     from . import models
@@ -50,7 +54,7 @@ def create_app():
         # Create all tables
         db.create_all()
         
-        # Add resume columns to existing candidate_auth table if they don't exist
+        # Add columns to existing candidate_auth table if they don't exist
         from sqlalchemy import text, inspect
         inspector = inspect(db.engine)
         
@@ -70,6 +74,31 @@ def create_app():
             if 'resume_uploaded_at' not in existing_columns:
                 db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN resume_uploaded_at TIMESTAMP"))
                 print("✅ Added resume_uploaded_at column to candidate_auth")
+            
+            # Add missing round completion columns
+            if 'mcq_completed' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN mcq_completed BOOLEAN DEFAULT FALSE NOT NULL"))
+                print("✅ Added mcq_completed column to candidate_auth")
+            
+            if 'mcq_completed_at' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN mcq_completed_at TIMESTAMP"))
+                print("✅ Added mcq_completed_at column to candidate_auth")
+            
+            if 'psychometric_completed' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN psychometric_completed BOOLEAN DEFAULT FALSE NOT NULL"))
+                print("✅ Added psychometric_completed column to candidate_auth")
+            
+            if 'psychometric_completed_at' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN psychometric_completed_at TIMESTAMP"))
+                print("✅ Added psychometric_completed_at column to candidate_auth")
+            
+            if 'technical_completed' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN technical_completed BOOLEAN DEFAULT FALSE NOT NULL"))
+                print("✅ Added technical_completed column to candidate_auth")
+            
+            if 'technical_completed_at' not in existing_columns:
+                db.session.execute(text("ALTER TABLE candidate_auth ADD COLUMN technical_completed_at TIMESTAMP"))
+                print("✅ Added technical_completed_at column to candidate_auth")
             
             db.session.commit()
 

@@ -12,6 +12,12 @@ interface CandidateData {
   resume_url?: string;
   resume_filename?: string;
   resume_uploaded_at?: string;
+  mcq_completed?: boolean;
+  mcq_completed_at?: string;
+  psychometric_completed?: boolean;
+  psychometric_completed_at?: string;
+  technical_completed?: boolean;
+  technical_completed_at?: string;
 }
 
 export default function CandidateHome() {
@@ -45,7 +51,13 @@ export default function CandidateHome() {
       alert('Please upload your resume before starting the assessment');
       return;
     }
-    // TODO: Start assessment with uploaded resume
+    
+    // Check if all rounds are completed
+    if (candidateData.mcq_completed && candidateData.psychometric_completed && candidateData.technical_completed) {
+      alert('You have already completed all assessment rounds!');
+      return;
+    }
+    
     navigate('/assessment/demo-123');
   };
 
@@ -116,20 +128,35 @@ export default function CandidateHome() {
                   {ROUND_ORDER.map((roundId, idx) => {
                     const config = ROUND_CONFIGS[roundId];
                     const Icon = roundId === 'mcq' ? CheckSquare : roundId === 'psychometric' ? Brain : Code;
+                    const isCompleted = roundId === 'mcq' ? candidateData?.mcq_completed : 
+                                       roundId === 'psychometric' ? candidateData?.psychometric_completed :
+                                       candidateData?.technical_completed;
                     
                     return (
                       <div key={roundId} className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-primary">{idx + 1}</span>
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                          isCompleted ? 'bg-green-500/20' : 'bg-primary/10'
+                        }`}>
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <span className="text-sm font-semibold text-primary">{idx + 1}</span>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <Icon className="h-4 w-4 text-muted-foreground" />
-                            <h5 className="font-medium text-sm">{config.name}</h5>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {config.estimatedTime}min
-                            </span>
+                            <h5 className={`font-medium text-sm ${isCompleted ? 'text-green-600' : ''}`}>
+                              {config.name}
+                            </h5>
+                            {isCompleted ? (
+                              <span className="text-xs text-green-600 font-medium">Completed ✓</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {config.estimatedTime}min
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">{config.description}</p>
                         </div>
@@ -138,21 +165,35 @@ export default function CandidateHome() {
                   })}
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
-                  <p className="text-xs text-blue-700 dark:text-blue-400">
-                    <strong>Note:</strong> You must complete each round in sequence: 
-                    MCQ → Psychometric → Technical
-                  </p>
-                </div>
+                {candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed ? (
+                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-3 rounded-lg">
+                    <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                      ✓ All assessment rounds completed! Our team will review your responses and get back to you soon.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
+                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                      <strong>Note:</strong> You must complete each round in sequence: 
+                      MCQ → Psychometric → Technical. Once completed, a round cannot be retaken.
+                    </p>
+                  </div>
+                )}
 
                 <Button
                   size="lg"
                   className="w-full gap-2"
-                  disabled={!candidateData?.resume_url}
+                  disabled={!candidateData?.resume_url || (candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed)}
                   onClick={handleStartAssessment}
                 >
-                  Start Assessment
-                  <ArrowRight className="h-4 w-4" />
+                  {candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed 
+                    ? 'Assessment Completed' 
+                    : candidateData?.mcq_completed 
+                    ? 'Continue Assessment'
+                    : 'Start Assessment'}
+                  {!(candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed) && (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
                 </Button>
 
                 {!candidateData?.resume_url && (

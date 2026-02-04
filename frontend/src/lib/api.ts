@@ -148,7 +148,91 @@ export const adminApi = {
   },
 };
 
+// ============ MCQ Endpoints ============
+
+export const mcqApi = {
+  /** Submit a single MCQ answer */
+  submitAnswer: async (questionId: number, answerOption: string) => {
+    const token = localStorage.getItem('candidate_token');
+    if (!token) {
+      return { data: null, error: 'No authentication token found' };
+    }
+
+    return request('/api/mcq/submit', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        question_id: questionId,
+        answer_option: answerOption,
+      }),
+    });
+  },
+
+  /** Submit multiple MCQ answers at once */
+  batchSubmit: async (answers: Array<{ question_id: number; answer_option: string }>) => {
+    const token = localStorage.getItem('candidate_token');
+    if (!token) {
+      return { data: null, error: 'No authentication token found' };
+    }
+
+    return request('/api/mcq/batch-submit', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ answers }),
+    });
+  },
+
+  /** Complete MCQ round and lock it */
+  completeRound: async (answers: Array<{ question_id: number; answer_option: string }>) => {
+    const token = localStorage.getItem('candidate_token');
+    if (!token) {
+      return { data: null, error: 'No authentication token found' };
+    }
+
+    return request('/api/mcq/complete-round', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ answers }),
+    });
+  },
+
+  /** Get all MCQ responses for the candidate */
+  getResponses: async () => {
+    const token = localStorage.getItem('candidate_token');
+    if (!token) {
+      return { data: null, error: 'No authentication token found' };
+    }
+
+    return request('/api/mcq/responses', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  /** Get MCQ response for a specific question */
+  getResponse: async (questionId: number) => {
+    const token = localStorage.getItem('candidate_token');
+    if (!token) {
+      return { data: null, error: 'No authentication token found' };
+    }
+
+    return request(`/api/mcq/responses/${questionId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+};
+
 export default {
   candidate: candidateApi,
   admin: adminApi,
+  mcq: mcqApi,
 };
