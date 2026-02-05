@@ -48,7 +48,8 @@ def analyze_frame_with_llama(image_data_base64):
             image_data_base64 = image_data_base64.split("base64,")[1]
 
         completion = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="meta-llama/llama-4-scout-17b-16e-instruct", # Updated to Llama 4 Scout (supported multimodal)
+
             messages=[
                 {
                     "role": "user",

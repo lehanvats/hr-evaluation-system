@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from . import ProctorService
-from ..models import ProctorSession, ProctorEvent, CandidateAuth
+from ..models import CandidateAuth, ProctoringViolation, ProctorSession
 from ..extensions import db
 from ..config import Config
 import jwt
@@ -56,13 +56,14 @@ def start_session():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
         
-    data = request.json
-    assessment_id = data.get('assessment_id')
+    # Generate simple session ID (timestamp + user_id)
+    import uuid
+    session_uuid = str(uuid.uuid4())
     
+    # Create new session record
     session = ProctorSession(
         candidate_id=user_id,
-        assessment_id=assessment_id,
-        start_time=datetime.utcnow(),
+        session_uuid=session_uuid,
         status='active'
     )
     db.session.add(session)
@@ -70,7 +71,7 @@ def start_session():
     
     return jsonify({
         'success': True,
-        'session_id': session.id,
+        'session_id': session_uuid,
         'message': 'Proctoring session started'
     })
 
@@ -79,18 +80,8 @@ def end_session():
     user_id = verify_candidate_token()
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
-        
-    data = request.json
-    session_id = data.get('session_id')
     
-    session = ProctorSession.query.get(session_id)
-    if not session or session.candidate_id != user_id:
-        return jsonify({'error': 'Invalid session'}), 404
-        
-    session.end_time = datetime.utcnow()
-    session.status = 'completed'
-    db.session.commit()
-    
+    # Session end is just acknowledged, violations already logged
     return jsonify({'success': True})
 
 @ProctorService.route('/log-event', methods=['POST'])
@@ -104,21 +95,73 @@ def log_event():
     event_type = data.get('event_type')
     details = data.get('details')
     
-    # Optional: Verify session belongs to user
-    
     # Log to console for visibility
     log_proctor_event(event_type, session_id, user_id, details)
     
-    event = ProctorEvent(
+    # Use ProctoringViolation instead of ProctorEvent
+    severity_map = {
+        'multiple_faces': 'high',
+        'no_face': 'high',
+        'phone_detected': 'high',
+        'looking_away': 'medium',
+        'tab_switch': 'medium'
+    }
+    
+    violation = ProctoringViolation(
         session_id=session_id,
-        event_type=event_type,
-        details=str(details) if details else None,
+        candidate_id=user_id,
+        violation_type=event_type,
+        violation_data={'details': details},
+        severity=severity_map.get(event_type, 'low'),
         timestamp=datetime.utcnow()
     )
-    db.session.add(event)
+    db.session.add(violation)
     db.session.commit()
     
     return jsonify({'success': True})
+
+@ProctorService.route('/log-violation', methods=['POST'])
+def log_violation():
+    """Log a proctoring violation for the current candidate"""
+    user_id = verify_candidate_token()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.json
+    session_id = data.get('session_id')
+    violation_type = data.get('violation_type')
+    violation_data = data.get('violation_data', {})
+    
+    # Determine severity based on violation type
+    severity_map = {
+        'multiple_faces': 'high',
+        'no_face': 'high',
+        'phone_detected': 'high',
+        'looking_away': 'medium',
+        'tab_switch': 'medium'
+    }
+    severity = severity_map.get(violation_type, 'low')
+    
+    # Log to console for visibility
+    log_proctor_event(violation_type, session_id, user_id, violation_data)
+    
+    # Save to database
+    violation = ProctoringViolation(
+        session_id=session_id,
+        candidate_id=user_id,
+        violation_type=violation_type,
+        violation_data=violation_data,
+        severity=severity,
+        timestamp=datetime.utcnow()
+    )
+    db.session.add(violation)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'violation_id': violation.id
+    })
+
 @ProctorService.route('/analyze-frame', methods=['POST'])
 def analyze_frame():
     user_id = verify_candidate_token()
@@ -147,14 +190,23 @@ def analyze_frame():
         # Log to console for visibility
         log_proctor_event(event_type, session_id, user_id, result)
         
-        event = ProctorEvent(
+        # Map severity
+        severity_map = {
+            'multiple_faces': 'high',
+            'no_face': 'high',
+            'phone_detected': 'high',
+            'looking_away': 'medium'
+        }
+        
+        violation = ProctoringViolation(
             session_id=session_id,
-            event_type=event_type,
-            details=json.dumps(result),
-            severity='warning',
+            candidate_id=user_id,
+            violation_type=event_type,
+            violation_data=result,
+            severity=severity_map.get(event_type, 'medium'),
             timestamp=datetime.utcnow()
         )
-        db.session.add(event)
+        db.session.add(violation)
         db.session.commit()
     
     return jsonify({
@@ -162,7 +214,7 @@ def analyze_frame():
         'analysis': result
     })
 
-@ProctorService.route('/session/<int:session_id>/summary', methods=['GET'])
+@ProctorService.route('/session/<string:session_id>/summary', methods=['GET'])
 def get_session_summary(session_id):
     """
     Get complete proctoring data for a session.
@@ -170,17 +222,26 @@ def get_session_summary(session_id):
     """
     # TODO: Add recruiter/admin auth check for production
     
-    session = ProctorSession.query.get(session_id)
+    # Try finding by UUID first
+    session = ProctorSession.query.filter_by(session_uuid=session_id).first()
+    if not session:
+        # Fallback to ID if integer
+        if session_id.isdigit():
+            session = ProctorSession.query.get(int(session_id))
+            
     if not session:
         return jsonify({'error': 'Session not found'}), 404
     
-    # Get all events for this session
-    events = ProctorEvent.query.filter_by(session_id=session_id).order_by(ProctorEvent.timestamp).all()
+    # Get all violations for this session
+    # Use the session_uuid if available, otherwise might need another way to link
+    # But ProctoringViolation uses session_id string which should be the UUID
+    search_id = session.session_uuid if session.session_uuid else str(session.id)
+    events = ProctoringViolation.query.filter_by(session_id=search_id).order_by(ProctoringViolation.timestamp).all()
     
     # Count violations by type
     violation_counts = {}
     for event in events:
-        violation_counts[event.event_type] = violation_counts.get(event.event_type, 0) + 1
+        violation_counts[event.violation_type] = violation_counts.get(event.violation_type, 0) + 1
     
     # Calculate risk score (simple algorithm for now)
     risk_score = 0
@@ -210,10 +271,10 @@ def get_session_summary(session_id):
         'events': [
             {
                 'id': e.id,
-                'type': e.event_type,
+                'type': e.violation_type,
                 'severity': e.severity,
                 'timestamp': e.timestamp.isoformat() if e.timestamp else None,
-                'details': e.details
+                'details': e.violation_data
             } for e in events
         ]
     })
@@ -228,7 +289,10 @@ def get_candidate_sessions(candidate_id):
     
     result = []
     for session in sessions:
-        event_count = ProctorEvent.query.filter_by(session_id=session.id).count()
+        # Create default count if no uuid
+        event_count = 0
+        if session.session_uuid:
+            event_count = ProctoringViolation.query.filter_by(session_id=session.session_uuid).count()
         result.append({
             'id': session.id,
             'assessment_id': session.assessment_id,

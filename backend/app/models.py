@@ -280,6 +280,7 @@ class ProctorSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False)
     assessment_id = db.Column(db.String(100), nullable=True)  # ID of the assessment being monitored
+    session_uuid = db.Column(db.String(36), unique=True, nullable=True)  # UUID for frontend/API
     start_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='active')  # active, completed, terminated
@@ -293,33 +294,12 @@ class ProctorSession(db.Model):
             'id': self.id,
             'candidate_id': self.candidate_id,
             'assessment_id': self.assessment_id,
+            'session_uuid': self.session_uuid,
             'start_time': self.start_time.isoformat() if self.start_time else None,
             'end_time': self.end_time.isoformat() if self.end_time else None,
             'status': self.status
         }
 
-#====================== Proctor Event ============================
-class ProctorEvent(db.Model):
-    __tablename__ = 'proctor_events'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('proctor_sessions.id'), nullable=False)
-    event_type = db.Column(db.String(50), nullable=False)  # multiple_faces, no_face, looking_away, phone_detected, tab_switch, etc.
-    details = db.Column(db.Text, nullable=True)  # JSON or text details about the event
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
-    # Relationship to session
-    session = db.relationship('ProctorSession', backref=db.backref('events'))
-    
-    def to_dict(self):
-        """Convert to dictionary for JSON serialization"""
-        return {
-            'id': self.id,
-            'session_id': self.session_id,
-            'event_type': self.event_type,
-            'details': self.details,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None
-        }
 
 #====================== Code Playback Recording ============================
 class CodePlayback(db.Model):
@@ -347,3 +327,28 @@ class CodePlayback(db.Model):
         }
 
 
+
+#====================== Proctoring Violations ============================
+class ProctoringViolation(db.Model):
+    __tablename__ = 'proctoring_violations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(100), nullable=False)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False)
+    violation_type = db.Column(db.String(50), nullable=False)
+    violation_data = db.Column(db.JSON, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    severity = db.Column(db.String(20), default='medium')
+    
+    candidate = db.relationship('CandidateAuth', backref='proctoring_violations')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'candidate_id': self.candidate_id,
+            'violation_type': self.violation_type,
+            'violation_data': self.violation_data,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'severity': self.severity
+        }

@@ -73,6 +73,27 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
         }
     }, [sessionId]);
 
+    const logViolation = useCallback(async (violationType: string, violationData: any) => {
+        if (!sessionId) return;
+
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/log-violation`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('candidate_token')}`
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    violation_type: violationType,
+                    violation_data: violationData
+                })
+            });
+        } catch (e) {
+            console.error("Failed to log violation", e);
+        }
+    }, [sessionId]);
+
     const analyzeFrame = useCallback(async (base64Image: string) => {
         if (!sessionId) return;
 
@@ -97,12 +118,15 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
                 // Check for violations
                 if (!result.face_detected) {
                     setStatus('warning');
+                    logViolation('no_face', result); // Log to database
                     onViolation?.('no_face', result);
                 } else if (result.multiple_faces) {
                     setStatus('warning'); // Critical
+                    logViolation('multiple_faces', result); // Log to database
                     onViolation?.('multiple_faces', result);
                 } else if (result.looking_away) {
                     setStatus('warning');
+                    logViolation('looking_away', result); // Log to database
                     onViolation?.('looking_away', result);
                 } else {
                     setStatus('active');
@@ -111,30 +135,21 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
         } catch (e) {
             console.error("Frame analysis failed", e);
         }
-    }, [sessionId, onViolation]);
+    }, [sessionId, onViolation, logViolation]);
 
     // Tab Switching / Visibility Detection
     useEffect(() => {
         const handleVisibilityChange = async () => {
             if (document.hidden && sessionId) {
-                // Log tab switch event
-                try {
-                    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/log-event`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('candidate_token')}`
-                        },
-                        body: JSON.stringify({
-                            session_id: sessionId,
-                            event_type: 'tab_switch',
-                            details: 'User switched tabs or minimized window'
-                        })
-                    });
-                    onViolation?.('tab_switch', { face_detected: true, multiple_faces: false, looking_away: false, error: 'Tab switch detected' });
-                } catch (e) {
-                    console.error("Failed to log tab switch", e);
-                }
+                // Only trigger callback, don't automatically log violation
+                const violationData = {
+                    face_detected: true,
+                    multiple_faces: false,
+                    looking_away: false,
+                    error: 'Tab switch detected'
+                };
+
+                onViolation?.('tab_switch', violationData);
             }
         };
 

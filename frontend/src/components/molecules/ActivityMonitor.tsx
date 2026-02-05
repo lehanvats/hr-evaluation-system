@@ -14,15 +14,38 @@ interface ActivityEvent {
 interface ActivityMonitorProps {
     className?: string;
     onToggle?: (visible: boolean) => void;
+    sessionId?: string; // Proctoring session ID for backend logging
 }
 
-export function ActivityMonitor({ className, onToggle }: ActivityMonitorProps) {
+export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMonitorProps) {
     const [events, setEvents] = useState<ActivityEvent[]>([]);
     const [keystrokeCount, setKeystrokeCount] = useState(0);
     const [copyCount, setCopyCount] = useState(0);
     const [pasteCount, setPasteCount] = useState(0);
     const [suspiciousCount, setSuspiciousCount] = useState(0);
     const [isCollapsed, setIsCollapsed] = useState(false);
+
+    // Helper function to log activity to backend
+    const logActivityToBackend = async (type: string, details?: any) => {
+        if (!sessionId) return; // Only log if we have a session
+
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/log-violation`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('candidate_token')}`
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    violation_type: type,
+                    violation_data: { details, timestamp: new Date().toISOString() }
+                })
+            });
+        } catch (error) {
+            console.error('Failed to log activity:', error);
+        }
+    };
 
     const toggleCollapse = () => {
         setIsCollapsed(!isCollapsed);
@@ -53,6 +76,8 @@ export function ActivityMonitor({ className, onToggle }: ActivityMonitorProps) {
                 timestamp: new Date(),
                 details: 'Text copied to clipboard'
             });
+            // Log to backend
+            logActivityToBackend('copy_paste', 'Text copied to clipboard');
         };
 
         const handlePaste = () => {
@@ -63,6 +88,8 @@ export function ActivityMonitor({ className, onToggle }: ActivityMonitorProps) {
                 timestamp: new Date(),
                 details: 'Text pasted from clipboard'
             });
+            // Log to backend
+            logActivityToBackend('copy_paste', 'Text pasted from clipboard');
         };
 
         window.addEventListener('copy', handleCopy);
@@ -83,6 +110,8 @@ export function ActivityMonitor({ className, onToggle }: ActivityMonitorProps) {
                 timestamp: new Date(),
                 details: 'Mouse left assessment window'
             });
+            // Log to backend
+            logActivityToBackend('mouse_exit', 'Mouse left assessment window');
         };
 
         document.addEventListener('mouseleave', handleMouseLeave);
@@ -99,6 +128,8 @@ export function ActivityMonitor({ className, onToggle }: ActivityMonitorProps) {
                     timestamp: new Date(),
                     details: 'Window/tab switched'
                 });
+                // Log to backend
+                logActivityToBackend('tab_switch', 'Window/tab switched');
             }
         };
 

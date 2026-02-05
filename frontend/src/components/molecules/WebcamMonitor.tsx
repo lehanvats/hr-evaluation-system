@@ -74,7 +74,8 @@ export function WebcamMonitor({ className, onFrameCapture, status: externalStatu
       }
     };
 
-    const captureInterval = setInterval(captureFrame, 10000); // Capture every 10 seconds
+    const captureInterval = setInterval(captureFrame, 1000); // Capture every 1 second for exam monitoring
+
 
     return () => clearInterval(captureInterval);
   }, [onFrameCapture, hasPermission]);
