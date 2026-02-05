@@ -5,12 +5,93 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { mockCandidateDetails } from '@/lib/mock-data';
+import { useEffect, useState } from 'react';
+
+interface MCQResult {
+  correct_answers: number;
+  wrong_answers: number;
+  percentage_correct: number;
+}
+
+interface PsychometricResult {
+  extraversion: number;
+  agreeableness: number;
+  conscientiousness: number;
+  emotional_stability: number;
+  intellect_imagination: number;
+}
+
+interface IntegrityLog {
+  timestamp: string;
+  event: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+interface CandidateDetail {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  technical_score: number;
+  soft_skill_score: number;
+  fairplay_score: number;
+  overall_score: number;
+  status: string;
+  verdict: 'Hire' | 'No-Hire';
+  applied_date: string;
+  mcq_result: MCQResult;
+  psychometric_result: PsychometricResult;
+  integrity_logs: IntegrityLog[];
+  ai_rationale: string;
+}
 
 export default function CandidateDetail() {
   const { id } = useParams<{ id: string }>();
-  // Fallback to the first mock candidate if ID not found or mocks limited
-  const candidate = mockCandidateDetails[id || "1"] || mockCandidateDetails["1"];
+  const [candidate, setCandidate] = useState<CandidateDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchCandidateDetail(id);
+    }
+  }, [id]);
+
+  const fetchCandidateDetail = async (candidateId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('recruiterToken');
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5000/recruiter-dashboard/candidates/${candidateId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch candidate details');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setCandidate(data.candidate);
+      } else {
+        throw new Error(data.message || 'Failed to load candidate details');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching candidate details:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getVerdictBadge = (verdict: string) => {
     if (verdict === 'Hire') {
@@ -37,6 +118,38 @@ export default function CandidateDetail() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in max-w-7xl mx-auto p-6">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading candidate details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !candidate) {
+    return (
+      <div className="space-y-6 animate-fade-in max-w-7xl mx-auto p-6">
+        <Link
+          to="/admin/dashboard"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-smooth"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <p>{error || 'Candidate not found'}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto p-6">
       {/* Back Link */}
@@ -52,7 +165,7 @@ export default function CandidateDetail() {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-border pb-6">
         <div className="flex items-center gap-6">
           <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
-            {candidate.name.split(' ').map(n => n[0]).join('')}
+            {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase()}
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -117,33 +230,97 @@ export default function CandidateDetail() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium">Technical Skills</span>
-                <span className="font-bold">{candidate.technical_score}/100</span>
+                <span className="font-bold">{candidate.technical_score.toFixed(1)}/100</span>
               </div>
               <Progress value={candidate.technical_score} className="h-3" />
+              <p className="text-xs text-muted-foreground">
+                MCQ: {candidate.mcq_result.correct_answers}/{candidate.mcq_result.correct_answers + candidate.mcq_result.wrong_answers} correct
+              </p>
             </div>
 
             {/* Soft Skills Score */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium">Soft Skills / Culture</span>
-                <span className="font-bold">{candidate.soft_skill_score}/100</span>
+                <span className="font-bold">{candidate.soft_skill_score.toFixed(1)}/100</span>
               </div>
               <Progress value={candidate.soft_skill_score} className="h-3" />
+            </div>
+
+            {/* Fairplay Score */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Integrity / Fairplay</span>
+                <span className="font-bold">{candidate.fairplay_score.toFixed(1)}/100</span>
+              </div>
+              <Progress value={candidate.fairplay_score} className="h-3" />
+              <p className="text-xs text-muted-foreground">
+                {candidate.integrity_logs.length} violation(s) detected
+              </p>
             </div>
 
             <div className="pt-4 border-t border-border">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Overall Weighted Score</span>
                 <span className="text-xl font-bold text-primary">
-                  {Math.round((candidate.technical_score * 0.7) + (candidate.soft_skill_score * 0.3))}%
+                  {candidate.overall_score.toFixed(1)}%
                 </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 3: Integrity Log (Spans full width on small, 1 col on large) */}
-        <Card className="md:col-span-2 lg:col-span-1 h-full flex flex-col lg:order-last">
+        {/* Card 3: Psychometric Breakdown */}
+        <Card className="md:col-span-2 lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Psychometric Assessment (Big Five Traits)</CardTitle>
+            <CardDescription>
+              Personality assessment based on the Five Factor Model
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Extraversion</span>
+                  <span className="text-sm font-bold">{candidate.psychometric_result.extraversion.toFixed(1)}/100</span>
+                </div>
+                <Progress value={candidate.psychometric_result.extraversion} className="h-2" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Agreeableness</span>
+                  <span className="text-sm font-bold">{candidate.psychometric_result.agreeableness.toFixed(1)}/100</span>
+                </div>
+                <Progress value={candidate.psychometric_result.agreeableness} className="h-2" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Conscientiousness</span>
+                  <span className="text-sm font-bold">{candidate.psychometric_result.conscientiousness.toFixed(1)}/100</span>
+                </div>
+                <Progress value={candidate.psychometric_result.conscientiousness} className="h-2" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Emotional Stability</span>
+                  <span className="text-sm font-bold">{candidate.psychometric_result.emotional_stability.toFixed(1)}/100</span>
+                </div>
+                <Progress value={candidate.psychometric_result.emotional_stability} className="h-2" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Intellect/Imagination</span>
+                  <span className="text-sm font-bold">{candidate.psychometric_result.intellect_imagination.toFixed(1)}/100</span>
+                </div>
+                <Progress value={candidate.psychometric_result.intellect_imagination} className="h-2" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Integrity Log */}
+        <Card className="md:col-span-2 lg:col-span-1 h-full flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-500" />
@@ -170,24 +347,15 @@ export default function CandidateDetail() {
                 ))}
                 {candidate.integrity_logs.length === 0 && (
                   <div className="text-center text-muted-foreground py-8">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
                     No integrity violations detected.
                   </div>
                 )}
               </div>
             </ScrollArea>
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
-          </CardContent>
-        </Card>
-
-        {/* Placeholder for Details (optional, can be removed if not needed by user scope) */}
-        <Card className="md:col-span-2 hidden lg:block">
-          <CardHeader>
-            <CardTitle>Detailed Assessment Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-32 border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground">
-              Detailed code analysis and question breakdown visualization
-            </div>
+            {candidate.integrity_logs.length > 0 && (
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+            )}
           </CardContent>
         </Card>
       </div>

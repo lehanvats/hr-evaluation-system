@@ -26,8 +26,8 @@ export default function RecruiterLogin() {
       if (result.data && (result.data as any).success) {
         const data = result.data as any;
         // Store token and user data
-        localStorage.setItem('recruiter_token', data.token);
-        localStorage.setItem('recruiter_user', JSON.stringify(data.user));
+        localStorage.setItem('recruiterToken', data.token);
+        localStorage.setItem('recruiterUser', JSON.stringify(data.user));
         
         // Navigate to dashboard
         navigate('/admin/dashboard');

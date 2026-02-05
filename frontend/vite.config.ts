@@ -18,4 +18,13 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ['face-api.js'],
+    exclude: [],
+  },
+  build: {
+    commonjsOptions: {
+      include: [/face-api\.js/, /node_modules/],
+    },
+  },
 }));

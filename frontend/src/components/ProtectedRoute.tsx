@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
-  const token = localStorage.getItem('recruiter_token');
+  const token = localStorage.getItem('recruiterToken');
 
   if (!token) {
     // Redirect to login page if not authenticated

@@ -83,7 +83,7 @@ export default function TextBasedUploadDialog({
     setError(null);
 
     try {
-      const token = localStorage.getItem('recruiter_token');
+      const token = localStorage.getItem('recruiterToken');
       const formData = new FormData();
       formData.append('file', selectedFile);
 

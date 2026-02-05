@@ -664,3 +664,396 @@ def reset_evaluation_criteria():
             'success': False,
             'message': f'An error occurred: {str(e)}'
         }), 500
+
+
+#====================== CANDIDATE LIST AND DETAILS ENDPOINTS ============================
+
+@RecruiterDashboard.route('/candidates', methods=['GET'])
+def get_candidates():
+    """
+    GET ALL CANDIDATES ENDPOINT
+    
+    Retrieves list of all candidates with calculated scores and status.
+    Scores are calculated based on recruiter's evaluation criteria.
+    
+    Authentication: Required (JWT Bearer token - recruiter only)
+    
+    Response:
+        {
+            "success": true,
+            "candidates": [
+                {
+                    "id": <candidate_id>,
+                    "email": "<email>",
+                    "name": "<name or email>",
+                    "role": "Candidate",
+                    "technical_score": <0-100>,
+                    "soft_skill_score": <0-100>,
+                    "fairplay_score": <0-100>,
+                    "overall_score": <weighted average>,
+                    "status": "High Match|Potential|Reject",
+                    "mcq_completed": true/false,
+                    "psychometric_completed": true/false,
+                    "technical_completed": true/false,
+                    "text_based_completed": true/false
+                }
+            ],
+            "stats": {
+                "total_candidates": <count>,
+                "assessments_completed": <count>,
+                "high_match": <count>,
+                "potential": <count>,
+                "reject": <count>
+            }
+        }
+        
+    Status Codes:
+        - 200: Success
+        - 401: Unauthorized
+        - 403: Forbidden (not a recruiter)
+        - 500: Server error
+    """
+    # Verify recruiter authentication
+    recruiter_id, error = verify_recruiter_token()
+    if error:
+        return error
+    
+    try:
+        from ..models import MCQResult, PsychometricResult, ProctoringViolation
+        
+        # Get recruiter's evaluation criteria (or use defaults)
+        criteria = EvaluationCriteria.query.filter_by(recruiter_id=recruiter_id).first()
+        if not criteria:
+            # Use default weights
+            tech_weight = 37.5
+            psycho_weight = 25.0
+            soft_weight = 25.0
+            fair_weight = 12.5
+        else:
+            tech_weight = criteria.technical_skill
+            psycho_weight = criteria.psychometric_assessment
+            soft_weight = criteria.soft_skill
+            fair_weight = criteria.fairplay
+        
+        # Get all candidates
+        candidates = CandidateAuth.query.all()
+        
+        candidates_data = []
+        stats = {
+            'total_candidates': len(candidates),
+            'assessments_completed': 0,
+            'high_match': 0,
+            'potential': 0,
+            'reject': 0
+        }
+        
+        for candidate in candidates:
+            # Calculate technical score (from MCQ)
+            mcq_result = MCQResult.query.filter_by(student_id=candidate.id).first()
+            technical_score = mcq_result.percentage_correct if mcq_result else 0
+            
+            # Calculate soft skill score (from Psychometric - average of Big Five traits)
+            psycho_result = PsychometricResult.query.filter_by(student_id=candidate.id).first()
+            if psycho_result:
+                # Big Five traits are scored 0-50, normalize to 0-100
+                soft_skill_score = (
+                    psycho_result.extraversion +
+                    psycho_result.agreeableness +
+                    psycho_result.conscientiousness +
+                    psycho_result.emotional_stability +
+                    psycho_result.intellect_imagination
+                ) / 5 * 2  # Convert 0-50 scale to 0-100
+            else:
+                soft_skill_score = 0
+            
+            # Calculate fairplay score (from Proctoring Violations)
+            violations = ProctoringViolation.query.filter_by(candidate_id=candidate.id).all()
+            fairplay_score = 100  # Start with perfect score
+            for violation in violations:
+                # Deduct points based on severity
+                if violation.severity == 'high':
+                    fairplay_score -= 15
+                elif violation.severity == 'medium':
+                    fairplay_score -= 8
+                else:  # low
+                    fairplay_score -= 3
+            fairplay_score = max(0, fairplay_score)  # Don't go below 0
+            
+            # Check if at least one assessment is completed
+            has_taken_test = candidate.mcq_completed or candidate.psychometric_completed or candidate.technical_completed or candidate.text_based_completed
+            
+            if has_taken_test:
+                stats['assessments_completed'] += 1
+            
+            # Calculate overall weighted score only if tests have been taken
+            if has_taken_test:
+                overall_score = (
+                    (technical_score * tech_weight / 100) +
+                    (soft_skill_score * soft_weight / 100) +
+                    (fairplay_score * fair_weight / 100)
+                )
+                
+                # Determine status based on overall score
+                if overall_score >= 75:
+                    status = 'High Match'
+                    stats['high_match'] += 1
+                elif overall_score >= 50:
+                    status = 'Potential'
+                    stats['potential'] += 1
+                else:
+                    status = 'Reject'
+                    stats['reject'] += 1
+            else:
+                # No test taken yet
+                overall_score = 0
+                status = 'Not Tested'
+            
+            candidates_data.append({
+                'id': candidate.id,
+                'email': candidate.email,
+                'name': candidate.email.split('@')[0].title(),  # Use email username as name
+                'role': 'Candidate',  # Default role
+                'technical_score': round(technical_score, 2) if has_taken_test else None,
+                'soft_skill_score': round(soft_skill_score, 2) if has_taken_test else None,
+                'fairplay_score': round(fairplay_score, 2) if has_taken_test else None,
+                'overall_score': round(overall_score, 2) if has_taken_test else None,
+                'status': status,
+                'has_taken_test': has_taken_test,
+                'mcq_completed': candidate.mcq_completed,
+                'psychometric_completed': candidate.psychometric_completed,
+                'technical_completed': candidate.technical_completed,
+                'text_based_completed': candidate.text_based_completed
+            })
+        
+        return jsonify({
+            'success': True,
+            'candidates': candidates_data,
+            'stats': stats
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"\n❌ GET CANDIDATES ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+
+@RecruiterDashboard.route('/candidates/<int:candidate_id>', methods=['GET'])
+def get_candidate_detail(candidate_id):
+    """
+    GET CANDIDATE DETAIL ENDPOINT
+    
+    Retrieves detailed information for a specific candidate including:
+    - Basic info and scores
+    - MCQ results breakdown
+    - Psychometric assessment (Big Five traits)
+    - Text-based answers
+    - Proctoring violation logs
+    - AI rationale (if available)
+    
+    Authentication: Required (JWT Bearer token - recruiter only)
+    
+    Response:
+        {
+            "success": true,
+            "candidate": {
+                "id": <candidate_id>,
+                "email": "<email>",
+                "name": "<name>",
+                "role": "Candidate",
+                "technical_score": <0-100>,
+                "soft_skill_score": <0-100>,
+                "fairplay_score": <0-100>,
+                "overall_score": <weighted average>,
+                "status": "High Match|Potential|Reject",
+                "verdict": "Hire|No-Hire",
+                "applied_date": "<date>",
+                "mcq_result": {
+                    "correct_answers": <count>,
+                    "wrong_answers": <count>,
+                    "percentage_correct": <percentage>
+                },
+                "psychometric_result": {
+                    "extraversion": <0-100>,
+                    "agreeableness": <0-100>,
+                    "conscientiousness": <0-100>,
+                    "emotional_stability": <0-100>,
+                    "intellect_imagination": <0-100>
+                },
+                "text_answers": [
+                    {"question_id": <id>, "answer": "<text>", "word_count": <count>}
+                ],
+                "integrity_logs": [
+                    {"timestamp": "<time>", "event": "<description>", "severity": "low|medium|high"}
+                ],
+                "ai_rationale": "<AI generated rationale or default message>"
+            }
+        }
+        
+    Status Codes:
+        - 200: Success
+        - 404: Candidate not found
+        - 401: Unauthorized
+        - 403: Forbidden (not a recruiter)
+        - 500: Server error
+    """
+    # Verify recruiter authentication
+    recruiter_id, error = verify_recruiter_token()
+    if error:
+        return error
+    
+    try:
+        from ..models import MCQResult, PsychometricResult, TextBasedAnswer, ProctoringViolation
+        
+        # Get candidate
+        candidate = CandidateAuth.query.get(candidate_id)
+        if not candidate:
+            return jsonify({
+                'success': False,
+                'message': 'Candidate not found'
+            }), 404
+        
+        # Get recruiter's evaluation criteria
+        criteria = EvaluationCriteria.query.filter_by(recruiter_id=recruiter_id).first()
+        if not criteria:
+            tech_weight = 37.5
+            psycho_weight = 25.0
+            soft_weight = 25.0
+            fair_weight = 12.5
+        else:
+            tech_weight = criteria.technical_skill
+            psycho_weight = criteria.psychometric_assessment
+            soft_weight = criteria.soft_skill
+            fair_weight = criteria.fairplay
+        
+        # Get MCQ results
+        mcq_result = MCQResult.query.filter_by(student_id=candidate.id).first()
+        technical_score = mcq_result.percentage_correct if mcq_result else 0
+        mcq_data = mcq_result.to_dict() if mcq_result else {
+            'correct_answers': 0,
+            'wrong_answers': 0,
+            'percentage_correct': 0
+        }
+        
+        # Get Psychometric results
+        psycho_result = PsychometricResult.query.filter_by(student_id=candidate.id).first()
+        if psycho_result:
+            soft_skill_score = (
+                psycho_result.extraversion +
+                psycho_result.agreeableness +
+                psycho_result.conscientiousness +
+                psycho_result.emotional_stability +
+                psycho_result.intellect_imagination
+            ) / 5 * 2
+            psycho_data = {
+                'extraversion': round(psycho_result.extraversion * 2, 2),  # Convert to 0-100 scale
+                'agreeableness': round(psycho_result.agreeableness * 2, 2),
+                'conscientiousness': round(psycho_result.conscientiousness * 2, 2),
+                'emotional_stability': round(psycho_result.emotional_stability * 2, 2),
+                'intellect_imagination': round(psycho_result.intellect_imagination * 2, 2)
+            }
+        else:
+            soft_skill_score = 0
+            psycho_data = {
+                'extraversion': 0,
+                'agreeableness': 0,
+                'conscientiousness': 0,
+                'emotional_stability': 0,
+                'intellect_imagination': 0
+            }
+        
+        # Get Text-based answers
+        text_answers = TextBasedAnswer.query.filter_by(student_id=candidate.id).all()
+        text_answers_data = [answer.to_dict() for answer in text_answers]
+        
+        # Get Proctoring violations
+        violations = ProctoringViolation.query.filter_by(candidate_id=candidate.id).all()
+        fairplay_score = 100
+        integrity_logs = []
+        for violation in violations:
+            if violation.severity == 'high':
+                fairplay_score -= 15
+            elif violation.severity == 'medium':
+                fairplay_score -= 8
+            else:
+                fairplay_score -= 3
+            
+            integrity_logs.append({
+                'timestamp': violation.timestamp.strftime('%I:%M %p') if violation.timestamp else 'N/A',
+                'event': violation.violation_type.replace('_', ' ').title(),
+                'severity': violation.severity
+            })
+        fairplay_score = max(0, fairplay_score)
+        
+        # Calculate overall score
+        overall_score = (
+            (technical_score * tech_weight / 100) +
+            (soft_skill_score * soft_weight / 100) +
+            (fairplay_score * fair_weight / 100)
+        )
+        
+        # Determine status and verdict
+        if overall_score >= 75:
+            status = 'High Match'
+            verdict = 'Hire'
+        elif overall_score >= 50:
+            status = 'Potential'
+            verdict = 'No-Hire'
+        else:
+            status = 'Reject'
+            verdict = 'No-Hire'
+        
+        # Generate AI rationale (placeholder - can be enhanced with actual AI service)
+        if verdict == 'Hire':
+            ai_rationale = f"Candidate {candidate.email} demonstrates strong performance across all assessment categories. "
+            ai_rationale += f"Technical proficiency score of {round(technical_score, 1)}% indicates solid problem-solving capabilities. "
+            if soft_skill_score >= 70:
+                ai_rationale += f"Psychometric assessment reveals excellent interpersonal skills and cultural fit. "
+            if fairplay_score >= 90:
+                ai_rationale += "Assessment integrity was maintained throughout, indicating strong ethical standards. "
+            ai_rationale += "Recommended for immediate consideration."
+        else:
+            ai_rationale = f"Candidate {candidate.email} shows areas requiring improvement. "
+            if technical_score < 60:
+                ai_rationale += "Technical assessment score suggests need for additional skill development. "
+            if soft_skill_score < 60:
+                ai_rationale += "Psychometric evaluation indicates potential challenges with team dynamics or role fit. "
+            if fairplay_score < 80:
+                ai_rationale += "Multiple integrity concerns were flagged during assessment. "
+            ai_rationale += "Consider for future opportunities after further development."
+        
+        candidate_data = {
+            'id': candidate.id,
+            'email': candidate.email,
+            'name': candidate.email.split('@')[0].title(),
+            'role': 'Candidate',
+            'technical_score': round(technical_score, 2),
+            'soft_skill_score': round(soft_skill_score, 2),
+            'fairplay_score': round(fairplay_score, 2),
+            'overall_score': round(overall_score, 2),
+            'status': status,
+            'verdict': verdict,
+            'applied_date': candidate.mcq_completed_at.strftime('%Y-%m-%d') if candidate.mcq_completed_at else 'N/A',
+            'mcq_result': mcq_data,
+            'psychometric_result': psycho_data,
+            'text_answers': text_answers_data,
+            'integrity_logs': integrity_logs,
+            'ai_rationale': ai_rationale
+        }
+        
+        return jsonify({
+            'success': True,
+            'candidate': candidate_data
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"\n❌ GET CANDIDATE DETAIL ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }), 500

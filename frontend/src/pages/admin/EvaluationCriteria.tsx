@@ -42,7 +42,7 @@ export default function EvaluationCriteria() {
 
   const fetchEvaluationCriteria = async () => {
     try {
-      const token = localStorage.getItem('recruiter_token');
+      const token = localStorage.getItem('recruiterToken');
       const response = await fetch('http://localhost:5000/recruiter-dashboard/evaluation-criteria', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -189,7 +189,7 @@ export default function EvaluationCriteria() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('recruiter_token');
+      const token = localStorage.getItem('recruiterToken');
       const response = await fetch('http://localhost:5000/recruiter-dashboard/evaluation-criteria', {
         method: 'POST',
         headers: {
@@ -233,7 +233,7 @@ export default function EvaluationCriteria() {
   const handleResetToDefaults = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('recruiter_token');
+      const token = localStorage.getItem('recruiterToken');
       const response = await fetch('http://localhost:5000/recruiter-dashboard/evaluation-criteria/reset', {
         method: 'POST',
         headers: {

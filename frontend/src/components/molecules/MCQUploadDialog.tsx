@@ -119,7 +119,7 @@ export default function MCQUploadDialog({
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      const token = localStorage.getItem('recruiter_token');
+      const token = localStorage.getItem('recruiterToken');
       if (!token) {
         throw new Error('No authentication token found');
       }

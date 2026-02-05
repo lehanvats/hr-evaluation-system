@@ -17,7 +17,7 @@ async function request<T>(
   try {
     // Get token from localStorage (try both candidate and recruiter tokens)
     const candidateToken = localStorage.getItem('candidate_token');
-    const recruiterToken = localStorage.getItem('recruiter_token');
+    const recruiterToken = localStorage.getItem('recruiterToken');
     const token = candidateToken || recruiterToken;
 
     // Build headers with authentication if token exists
@@ -138,7 +138,7 @@ export const adminApi = {
 
   /** Upload candidates from CSV/Excel file */
   uploadCandidates: async (file: File) => {
-    const token = localStorage.getItem('recruiter_token');
+    const token = localStorage.getItem('recruiterToken');
     if (!token) {
       return { data: null, error: 'No authentication token found' };
     }
@@ -240,7 +240,7 @@ export const mcqApi = {
 export const psychometricApi = {
   /** Load questions into database (one-time setup) */
   loadQuestions: async () => {
-    const token = localStorage.getItem('recruiter_token');
+    const token = localStorage.getItem('recruiterToken');
     return request('/api/psychometric/load-questions', {
       method: 'POST',
       headers: {
@@ -251,7 +251,7 @@ export const psychometricApi = {
 
   /** Get all psychometric questions (for recruiter) */
   getAllQuestions: async () => {
-    const token = localStorage.getItem('recruiter_token');
+    const token = localStorage.getItem('recruiterToken');
     return request('/api/psychometric/questions/all', {
       method: 'GET',
       headers: {
@@ -264,7 +264,7 @@ export const psychometricApi = {
   setConfig: async (recruiterId: number, numQuestions: number, selectionMode: 'random' | 'manual', selectedQuestionIds?: number[]) => {
     // recruiterId parameter kept for backwards compatibility but not sent to backend
     // Backend extracts recruiter_id from JWT token
-    const token = localStorage.getItem('recruiter_token');
+    const token = localStorage.getItem('recruiterToken');
     return request('/api/psychometric/config/set', {
       method: 'POST',
       headers: {
@@ -282,7 +282,7 @@ export const psychometricApi = {
   getCurrentConfig: async (recruiterId: number) => {
     // recruiterId parameter kept for backwards compatibility but not sent to backend
     // Backend extracts recruiter_id from JWT token
-    const token = localStorage.getItem('recruiter_token');
+    const token = localStorage.getItem('recruiterToken');
     return request('/api/psychometric/config/current', {
       method: 'GET',
       headers: {

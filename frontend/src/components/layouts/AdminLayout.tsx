@@ -34,8 +34,8 @@ export function AdminLayout() {
 
   const handleLogout = () => {
     // Remove auth data from localStorage
-    localStorage.removeItem('recruiter_token');
-    localStorage.removeItem('recruiter_user');
+    localStorage.removeItem('recruiterToken');
+    localStorage.removeItem('recruiterUser');
     
     // Redirect to home page
     navigate('/');
