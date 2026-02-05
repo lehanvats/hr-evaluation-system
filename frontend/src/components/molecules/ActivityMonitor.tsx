@@ -52,6 +52,15 @@ export function ActivityMonitor({ className, onToggle, onViolation }: ActivityMo
                     details: 'Snipping Tool detected'
                 });
                 logActivity('print_screen', 'Screenshot attempt detected (Snipping Tool)');
+            } else if (e.key === 'Meta') {
+                // Detect standalone Windows key
+                setSuspiciousCount(prev => prev + 1);
+                addEvent({
+                    type: 'keystroke',
+                    timestamp: new Date(),
+                    details: 'Windows Key detected'
+                });
+                logActivity('print_screen', 'Windows Key activity detected');
             }
         };
 

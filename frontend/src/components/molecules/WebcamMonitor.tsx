@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Video, Shield, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,10 +11,13 @@ interface WebcamMonitorProps {
 
 type MonitoringStatus = 'active' | 'warning' | 'error' | 'idle';
 
-export function WebcamMonitor({ className, stream, status: externalStatus }: WebcamMonitorProps) {
+export const WebcamMonitor = forwardRef<HTMLVideoElement, WebcamMonitorProps>(({ className, stream, status: externalStatus }, ref) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [status, setStatus] = useState<MonitoringStatus>(externalStatus || 'active');
   const videoRef = useRef<HTMLVideoElement>(null); // Internal ref
+
+  // Expose internal ref to parent
+  useImperativeHandle(ref, () => videoRef.current as HTMLVideoElement, [stream]);
 
   // Assign stream to video element when stream changes
   useEffect(() => {
@@ -150,4 +153,4 @@ export function WebcamMonitor({ className, stream, status: externalStatus }: Web
     </div>
   );
 }
-
+)

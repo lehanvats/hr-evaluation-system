@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Brain, Code, CheckSquare, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { mcqApi, candidateApi, psychometricApi } from '@/lib/api';
 import { useProctoring } from '@/hooks/useProctoring';
-import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection'; // Re-added
+import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection';
+import { useObjectDetection } from '@/hooks/useObjectDetection';
 import { useCodePlayback } from '@/hooks/useCodePlayback';
 
 interface ConsoleLog {
@@ -49,6 +50,9 @@ const ROUND_ICONS = {
 export default function Assessment() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  // Create ref to access video element for object detection
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Round Management State
   const [currentRound, setCurrentRound] = useState<AssessmentRound>('mcq');
@@ -95,13 +99,24 @@ export default function Assessment() {
   // Client-Side Face Detection
   const { stream } = useFaceDetection({
     enabled: isMonitoring, // Only detect when session is active
-    detectionInterval: 500, // Fast 500ms checks (no rate limits!)
+    detectionInterval: 500, // Fast 500ms checks
     onViolation: (event: ViolationEvent) => {
       const { type, details } = event;
       console.log(`🚨 Proctoring violation: ${type}`, details);
       addLog('error', `Security Alert: ${type.replace('_', ' ')}`);
 
       // Log to backend
+      logViolation(type, details);
+    }
+  });
+
+  // Client-Side Phone Detection
+  useObjectDetection({
+    enabled: isMonitoring,
+    videoRef, // Pass shared ref
+    onViolation: (type, details) => {
+      console.log(`📱 Phone violation: ${type}`, details);
+      addLog('error', `Security Alert: Phone Detected!`);
       logViolation(type, details);
     }
   });
@@ -855,6 +870,7 @@ export default function Assessment() {
       <div className="fixed bottom-4 left-4 z-50 flex gap-3">
         {/* Webcam Monitor */}
         <WebcamMonitor
+          ref={videoRef}
           stream={stream}
           status={proctorStatus}
           className=""
