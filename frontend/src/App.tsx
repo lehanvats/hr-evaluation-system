@@ -48,25 +48,22 @@ const App = () => (
               <Route path="/candidate/login" element={<CandidateLogin />} />
               <Route path="/candidate" element={<CandidateHome />} />
               <Route path="/candidate/mcq-test" element={<MCQTest />} />
-<<<<<<< Updated upstream
               <Route path="/candidate/psychometric-test" element={<PsychometricTest />} />
               <Route path="/candidate/text-based-test" element={<TextBasedTest />} />
-=======
->>>>>>> Stashed changes
               <Route path="/assessment/:id" element={<Assessment />} />
             </Route >
 
-  {/* Recruiter Login - Minimal Layout */ }
-  < Route element = {< CandidateLayout />}>
-    <Route path="/recruiter/login" element={<RecruiterLogin />} />
+            {/* Recruiter Login - Minimal Layout */}
+            < Route element={< CandidateLayout />}>
+              <Route path="/recruiter/login" element={<RecruiterLogin />} />
             </Route >
 
-  {/* Admin/Recruiter Flow - Dashboard Layout (Protected) */ }
-  < Route
-path = "/admin"
-element = {
+            {/* Admin/Recruiter Flow - Dashboard Layout (Protected) */}
+            < Route
+              path="/admin"
+              element={
                 < ProtectedRoute >
-  <AdminLayout />
+                  <AdminLayout />
                 </ProtectedRoute >
               }
             >
@@ -78,8 +75,8 @@ element = {
               <Route path="settings" element={<Settings />} />
             </Route >
 
-  {/* 404 */ }
-  < Route path = "*" element = {< NotFound />} />
+            {/* 404 */}
+            < Route path="*" element={< NotFound />} />
           </Routes >
         </div >
       </BrowserRouter >
