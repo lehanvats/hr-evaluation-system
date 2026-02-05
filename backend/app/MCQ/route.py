@@ -11,6 +11,8 @@ from ..config import Config
 from ..auth_helpers import verify_candidate_token, verify_recruiter_token
 import jwt
 from datetime import datetime
+import json
+from services.mcqresult_to_grading import evaluate_mcq_performance
 
 
 @MCQ.route('/questions', methods=['GET'])
@@ -187,6 +189,13 @@ def submit_mcq_answer():
         total_answered = result.correct_answers + result.wrong_answers
         if total_answered > 0:
             result.percentage_correct = (result.correct_answers / total_answered) * 100
+            
+            # AI Grading
+            try:
+                grading_result = evaluate_mcq_performance(result.correct_answers, total_answered)
+                result.grading_json = grading_result # Function now returns dict, no json.loads needed
+            except Exception as e:
+                print(f"⚠️ AI Grading failed: {e}")
         
         print(f"📊 New totals - Correct: {result.correct_answers}, Wrong: {result.wrong_answers}, Percentage: {result.percentage_correct}%")
         

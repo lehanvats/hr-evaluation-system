@@ -1,9 +1,29 @@
 import json
 import os
+import sys
+
+# For running as script:
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import client if we ever want to do AI based analysis, 
+# but currently the logic is simple math. 
+# However, to be consistent with "AI Grading" appearing in routes, maybe we want to keep the JSON return structure.
+# authentic existing code in ai_functions.py was just math but returned JSON string.
 
 def evaluate_mcq_performance(correct_answers, total_questions):
     """
-    Calculates percentage and returns as a JSON string.
+    Calculates percentage and returns as a JSON string (or dict/object in this new implementation).
+    The original returned a string "json.dumps(result)". 
+    Routes expect a string result from this function or handle it?
+    Checking route: `grading_str = evaluate_mcq_performance(...)` then `json.loads(grading_str)`.
+    So the original function returned a STRING.
+    
+    However, for cleaner service architecture, let's return a DICT, 
+    and let the route handle serialization if needed, or update route to expect dict.
+    
+    WAIT: The route does: `result.grading_json = json.loads(grading_str)`
+    So if I return a DICT, I should update route to just use it directly.
+    I will return a DICT here for better python practice.
     """
     if total_questions == 0:
         percentage = 0.0
@@ -13,23 +33,10 @@ def evaluate_mcq_performance(correct_answers, total_questions):
     result = {
         "percentage": round(percentage, 2)
     }
-    return json.dumps(result)
-
-def save_to_example_file(json_data):
-    """
-    Takes the JSON string and saves it to example.txt.
-    """
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'example.txt')
-    with open(file_path, 'w') as f:
-        f.write(json_data)
+    # Return dict, will update route to not json.loads a dict.
+    # OR: Keep it as string to minimize route changes? 
+    # Logic in plan said "Update Routes". I prefer returning Dict.
+    return result
 
 if __name__ == "__main__":
-    # Example values for testing
-    total = 20
-    correct = 18
-    
-    json_output = evaluate_mcq_performance(correct, total)
-    print(json_output)
-    save_to_example_file(json_output)
-
-
+    print(evaluate_mcq_performance(8, 10))

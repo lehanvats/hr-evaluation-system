@@ -48,18 +48,34 @@ export default function CandidateHome() {
     fetchCandidateData();
   }, []);
 
-  const handleStartAssessment = () => {
+  const handleStartAssessment = async () => {
     if (!candidateData?.resume_url) {
       alert('Please upload your resume before starting the assessment');
       return;
     }
-    
+
     // Check if all rounds are completed
     if (candidateData.mcq_completed && candidateData.psychometric_completed && candidateData.technical_completed && candidateData.text_based_completed) {
-      alert('You have already completed all assessment rounds!');
+      if (confirm("You have completed all rounds. Generate Final Report?")) {
+        setLoading(true);
+        try {
+          const res = await candidateApi.finishAssessment();
+          if ((res.data as any)?.success) {
+            alert("Assessment Finished! Rationale Generated.");
+            // In a real app, maybe show the rationale or redirect to a results page.
+          } else {
+            alert("Error finishing assessment: " + ((res.data as any)?.message || res.error));
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Failed to finish assessment.");
+        } finally {
+          setLoading(false);
+        }
+      }
       return;
     }
-    
+
     navigate('/assessment/demo-123');
   };
 
@@ -98,10 +114,10 @@ export default function CandidateHome() {
             currentResume={
               candidateData?.resume_url
                 ? {
-                    filename: candidateData.resume_filename || 'resume.pdf',
-                    url: candidateData.resume_url,
-                    uploadedAt: candidateData.resume_uploaded_at || new Date().toISOString(),
-                  }
+                  filename: candidateData.resume_filename || 'resume.pdf',
+                  url: candidateData.resume_url,
+                  uploadedAt: candidateData.resume_uploaded_at || new Date().toISOString(),
+                }
                 : undefined
             }
             onUploadSuccess={handleUploadSuccess}
@@ -111,37 +127,36 @@ export default function CandidateHome() {
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold mb-4">Assessment</h3>
-              
+
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                   <Brain className="h-4 w-4" />
                   AI-Powered Evaluation
                 </div>
-                
+
                 <p className="text-sm text-muted-foreground">
-                  Complete a comprehensive assessment in three rounds. 
+                  Complete a comprehensive assessment in three rounds.
                   Make sure to upload your resume first to begin.
                 </p>
 
                 {/* Assessment Rounds Preview */}
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                   <h4 className="font-medium text-sm mb-3">Assessment Workflow:</h4>
-                  
+
                   {ROUND_ORDER.map((roundId, idx) => {
                     const config = ROUND_CONFIGS[roundId];
-                    const Icon = roundId === 'mcq' ? CheckSquare : 
-                                 roundId === 'psychometric' ? Brain : 
-                                 roundId === 'text-based' ? FileText : Code;
-                    const isCompleted = roundId === 'mcq' ? candidateData?.mcq_completed : 
-                                       roundId === 'psychometric' ? candidateData?.psychometric_completed :
-                                       roundId === 'text-based' ? candidateData?.text_based_completed :
-                                       candidateData?.technical_completed;
-                    
+                    const Icon = roundId === 'mcq' ? CheckSquare :
+                      roundId === 'psychometric' ? Brain :
+                        roundId === 'text-based' ? FileText : Code;
+                    const isCompleted = roundId === 'mcq' ? candidateData?.mcq_completed :
+                      roundId === 'psychometric' ? candidateData?.psychometric_completed :
+                        roundId === 'text-based' ? candidateData?.text_based_completed :
+                          candidateData?.technical_completed;
+
                     return (
                       <div key={roundId} className="flex items-start gap-3">
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                          isCompleted ? 'bg-green-500/20' : 'bg-primary/10'
-                        }`}>
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isCompleted ? 'bg-green-500/20' : 'bg-primary/10'
+                          }`}>
                           {isCompleted ? (
                             <CheckCircle2 className="h-5 w-5 text-green-600" />
                           ) : (
@@ -179,7 +194,7 @@ export default function CandidateHome() {
                 ) : (
                   <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
                     <p className="text-xs text-blue-700 dark:text-blue-400">
-                      <strong>Note:</strong> You must complete each round in sequence: 
+                      <strong>Note:</strong> You must complete each round in sequence:
                       MCQ → Psychometric → Technical → Text-Based. Once completed, a round cannot be retaken.
                     </p>
                   </div>
@@ -188,14 +203,14 @@ export default function CandidateHome() {
                 <Button
                   size="lg"
                   className="w-full gap-2"
-                  disabled={!candidateData?.resume_url || (candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed && candidateData?.text_based_completed)}
+                  disabled={!candidateData?.resume_url}
                   onClick={handleStartAssessment}
                 >
-                  {candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed && candidateData?.text_based_completed 
-                    ? 'Assessment Completed' 
-                    : candidateData?.mcq_completed 
-                    ? 'Continue Assessment'
-                    : 'Start Assessment'}
+                  {candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed && candidateData?.text_based_completed
+                    ? 'Generate Final Report'
+                    : candidateData?.mcq_completed
+                      ? 'Continue Assessment'
+                      : 'Start Assessment'}
                   {!(candidateData?.mcq_completed && candidateData?.psychometric_completed && candidateData?.technical_completed && candidateData?.text_based_completed) && (
                     <ArrowRight className="h-4 w-4" />
                   )}

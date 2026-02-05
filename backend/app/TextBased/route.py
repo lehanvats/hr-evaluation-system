@@ -5,10 +5,12 @@ Handles open-ended question management and answer submission
 
 from flask import request, jsonify
 from . import TextBased
-from ..models import TextBasedQuestion, TextBasedAnswer, CandidateAuth as CandidateAuthModel
+from ..models import TextBasedQuestion, TextBasedAnswer, CandidateAuth as CandidateAuthModel, TextAssessmentResult
 from ..extensions import db
 from ..config import Config
 from ..auth_helpers import verify_candidate_token, verify_recruiter_token
+from services.textresponse_to_grading import evaluate_text_responses
+import json
 import jwt
 from datetime import datetime
 import pandas as pd
@@ -297,6 +299,34 @@ def complete_text_based_test():
         # Mark as completed
         candidate.text_based_completed = True
         candidate.text_based_completed_at = datetime.utcnow()
+        
+        # AI Grading for Text Responses
+        try:
+            answers = TextBasedAnswer.query.filter_by(student_id=candidate_id).all()
+            qa_pairs = []
+            for ans in answers:
+                # Need to fetch question text. Join is better but lazy load might work if relationship set
+                # TextBasedAnswer has 'question' relationship
+                qa_pairs.append({
+                    "question": ans.question.question,
+                    "answer": ans.answer
+                })
+            
+            if qa_pairs:
+                grading_result = evaluate_text_responses(qa_pairs)
+                
+                # Save to TextAssessmentResult
+                text_result = TextAssessmentResult.query.filter_by(candidate_id=candidate_id).first()
+                if not text_result:
+                    text_result = TextAssessmentResult(candidate_id=candidate_id)
+                    db.session.add(text_result)
+                
+                # evaluate_text_responses returns a dict (json.loads done inside function)
+                text_result.grading_json = grading_result
+                print(f"✅ Text Assessment Graded: {grading_result.get('remark')}")
+                
+        except Exception as e:
+            print(f"⚠️ Text Assessment Grading failed: {e}")
         
         db.session.commit()
         

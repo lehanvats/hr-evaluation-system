@@ -13,6 +13,10 @@ import jwt
 from datetime import datetime
 from supabase import create_client, Client
 import os
+import io
+from pypdf import PdfReader
+import json
+from services.resume_to_json import parse_resume_to_json
 
 
 @Resume.route('/upload', methods=['POST'])
@@ -143,6 +147,21 @@ def upload_resume():
             candidate.resume_url = public_url
             candidate.resume_filename = original_filename
             candidate.resume_uploaded_at = datetime.now()
+            
+            # AI Resume Parsing
+            try:
+                # Create file-like object from byte data
+                pdf_file = io.BytesIO(file_data)
+                reader = PdfReader(pdf_file)
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+                
+                parsed_json = parse_resume_to_json(text)
+                candidate.resume_data = parsed_json
+                print("✅ Resume parsed and saved to DB")
+            except Exception as e:
+                print(f"⚠️ Resume Parsing failed: {e}")
             
             db.session.commit()
             

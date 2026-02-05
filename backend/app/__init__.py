@@ -64,6 +64,10 @@ def create_app():
     from .PlaybackService import PlaybackService
     app.register_blueprint(PlaybackService, url_prefix='/api/playback')
 
+    # Assessment routes (finish/rationale)
+    from .Assessment import Assessment
+    app.register_blueprint(Assessment, url_prefix='/api/assessment')
+
     # Import models before creating tables
     from . import models
     

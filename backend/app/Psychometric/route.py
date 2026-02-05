@@ -6,6 +6,7 @@ from . import psychometric_bp
 from datetime import datetime
 import json
 import random
+from services.psychoresult_to_grading import evaluate_psychometric_match
 
 # Trait type mapping
 TRAIT_NAMES = {
@@ -400,6 +401,24 @@ def submit_test():
                 answers_json=json.dumps(answers)
             )
             db.session.add(result)
+        
+        # AI Grading (Psychometric Match)
+        # Using "Conscientiousness" as default target trait for now
+        target_trait = "Conscientiousness"
+        psycho_scores = {
+            "Extraversion": trait_scores[1],
+            "Agreeableness": trait_scores[2],
+            "Conscientiousness": trait_scores[3],
+            "Emotional Stability": trait_scores[4],
+            "Intellect/Imagination": trait_scores[5]
+        }
+        
+        try:
+            grading_result = evaluate_psychometric_match(psycho_scores, target_trait)
+            result.grading_json = grading_result
+            print(f"🤖 Psychometric AI Grading: {grading_result.get('match_grade')}")
+        except Exception as e:
+            print(f"⚠️ AI Grading failed: {e}")
         
         # Update candidate completion status
         candidate = CandidateAuth.query.get(candidate_id)

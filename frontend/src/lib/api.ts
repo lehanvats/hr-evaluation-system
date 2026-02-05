@@ -102,6 +102,17 @@ export const candidateApi = {
       body: JSON.stringify(answers),
     });
   },
+
+  /** Finish assessment and generate rationale */
+  finishAssessment: async () => {
+    const token = localStorage.getItem('candidate_token');
+    return request('/api/assessment/finish', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
 };
 
 // ============ Recruiter Endpoints ============

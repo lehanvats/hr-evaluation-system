@@ -12,6 +12,7 @@ class CandidateAuth(db.Model):
     resume_url = db.Column(db.String(500), nullable=True)  # Supabase storage URL
     resume_filename = db.Column(db.String(255), nullable=True)  # Original filename
     resume_uploaded_at = db.Column(db.DateTime, nullable=True)  # Upload timestamp
+    resume_data = db.Column(db.JSON, nullable=True)  # AI parsed resume data
     
     # Assessment round completion tracking
     mcq_completed = db.Column(db.Boolean, default=False, nullable=False)
@@ -113,6 +114,7 @@ class MCQResult(db.Model):
     correct_answers = db.Column(db.Integer, default=0, nullable=False)
     wrong_answers = db.Column(db.Integer, default=0, nullable=False)
     percentage_correct = db.Column(db.Float, default=0.0, nullable=False)
+    grading_json = db.Column(db.JSON, nullable=True)  # AI grading result
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationship to candidate
@@ -204,6 +206,7 @@ class PsychometricResult(db.Model):
     questions_answered = db.Column(db.Integer, default=0, nullable=False)
     test_completed = db.Column(db.Boolean, default=False, nullable=False)
     answers_json = db.Column(db.Text, nullable=True)  # JSON array of all answers
+    grading_json = db.Column(db.JSON, nullable=True)  # AI grading result
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationship to candidate
@@ -415,3 +418,27 @@ class EvaluationCriteria(db.Model):
         """Validate that all percentages sum to 100"""
         total = self.technical_skill + self.psychometric_assessment + self.soft_skill + self.fairplay
         return abs(total - 100.0) < 0.01  # Allow for floating point precision errors
+
+#====================== Text Assessment Result ============================
+class TextAssessmentResult(db.Model):
+    __tablename__ = 'text_assessment_results'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False, unique=True)
+    grading_json = db.Column(db.JSON, nullable=True)  # AI grading result
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    candidate = db.relationship('CandidateAuth', backref=db.backref('text_assessment_result', uselist=False))
+
+#====================== Candidate Rationale ============================
+class CandidateRationale(db.Model):
+    __tablename__ = 'candidate_rationale'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False, unique=True)
+    rationale_json = db.Column(db.JSON, nullable=True)  # Final AI decision
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    candidate = db.relationship('CandidateAuth', backref=db.backref('rationale', uselist=False))
