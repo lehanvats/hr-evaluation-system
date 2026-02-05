@@ -43,11 +43,24 @@ export function ActivityMonitor({ className, onToggle, onViolation }: ActivityMo
                 setKeystrokeCount(prev => prev + 1);
             }
 
-            // Detect PrintScreen
+            // Detect Win+Shift+S (Snipping Tool)
+            if ((e.metaKey || e.key === 'Meta') && e.shiftKey && e.key.toLowerCase() === 's') {
+                setSuspiciousCount(prev => prev + 1);
+                addEvent({
+                    type: 'keystroke',
+                    timestamp: new Date(),
+                    details: 'Snipping Tool detected'
+                });
+                logActivity('print_screen', 'Screenshot attempt detected (Snipping Tool)');
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            // Detect PrintScreen (keyup is more reliable for this key)
             if (e.key === 'PrintScreen') {
                 setSuspiciousCount(prev => prev + 1);
                 addEvent({
-                    type: 'keystroke', // Re-using keystroke type for icon, but logging specific type
+                    type: 'keystroke',
                     timestamp: new Date(),
                     details: 'PrintScreen detected'
                 });
@@ -56,7 +69,12 @@ export function ActivityMonitor({ className, onToggle, onViolation }: ActivityMo
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
     }, []);
 
     // Track clipboard activity
