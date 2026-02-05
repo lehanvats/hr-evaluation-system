@@ -352,3 +352,44 @@ class ProctoringViolation(db.Model):
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
             'severity': self.severity
         }
+
+#====================== Evaluation Criteria ============================
+class EvaluationCriteria(db.Model):
+    __tablename__ = 'evaluation_criteria'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    recruiter_id = db.Column(db.Integer, db.ForeignKey('recruiter_auth.id'), nullable=False, unique=True)
+    
+    # Evaluation parameters (stored as percentages, must sum to 100)
+    # Ratio: 1.5:1:1:0.5
+    technical_skill = db.Column(db.Float, nullable=False, default=37.5)  # Default 37.5% (1.5)
+    psychometric_assessment = db.Column(db.Float, nullable=False, default=25.0)  # Default 25% (1)
+    soft_skill = db.Column(db.Float, nullable=False, default=25.0)  # Default 25% (1)
+    fairplay = db.Column(db.Float, nullable=False, default=12.5)  # Default 12.5% (0.5)
+    
+    # Metadata
+    is_default = db.Column(db.Boolean, default=False, nullable=False)  # Whether using default values
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationship to recruiter
+    recruiter = db.relationship('RecruiterAuth', backref=db.backref('evaluation_criteria', uselist=False))
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'recruiter_id': self.recruiter_id,
+            'technical_skill': self.technical_skill,
+            'psychometric_assessment': self.psychometric_assessment,
+            'soft_skill': self.soft_skill,
+            'fairplay': self.fairplay,
+            'is_default': self.is_default,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def validate_percentages(self):
+        """Validate that all percentages sum to 100"""
+        total = self.technical_skill + self.psychometric_assessment + self.soft_skill + self.fairplay
+        return abs(total - 100.0) < 0.01  # Allow for floating point precision errors

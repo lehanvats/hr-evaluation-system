@@ -27,6 +27,7 @@ import Candidates from "@/pages/admin/Candidates";
 import CandidateDetail from "@/pages/admin/CandidateDetail";
 import Settings from "@/pages/admin/Settings";
 import PsychometricManagement from "@/pages/admin/PsychometricManagement";
+import EvaluationCriteria from "@/pages/admin/EvaluationCriteria";
 
 // Other
 import NotFound from "@/pages/NotFound";
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="candidates" element={<Candidates />} />
               <Route path="psychometric" element={<PsychometricManagement />} />
+              <Route path="evaluation-criteria" element={<EvaluationCriteria />} />
               <Route path="candidate/:id" element={<CandidateDetail />} />
               <Route path="settings" element={<Settings />} />
             </Route>

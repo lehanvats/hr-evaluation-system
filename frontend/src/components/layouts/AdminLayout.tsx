@@ -12,6 +12,7 @@ import {
   LogOut,
   Bell,
   Brain,
+  Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/admin/dashboard', icon: BarChart3, label: 'Dashboard' },
   { to: '/admin/candidates', icon: Users, label: 'Candidates' },
   { to: '/admin/psychometric', icon: Brain, label: 'Psychometric' },
+  { to: '/admin/evaluation-criteria', icon: Scale, label: 'Evaluation Criteria' },
   { to: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 

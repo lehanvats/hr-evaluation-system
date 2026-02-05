@@ -5,7 +5,7 @@ Handles all recruiter dashboard operations
 
 from flask import request, jsonify
 from . import RecruiterDashboard
-from ..models import CandidateAuth, MCQQuestion
+from ..models import CandidateAuth, MCQQuestion, EvaluationCriteria
 from ..extensions import db
 from ..config import Config
 from ..auth_helpers import verify_recruiter_token
@@ -379,6 +379,286 @@ def upload_mcq_questions():
     except Exception as e:
         import traceback
         print(f"\n❌ MCQ UPLOAD ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+
+#====================== EVALUATION CRITERIA ENDPOINTS ============================
+
+@RecruiterDashboard.route('/evaluation-criteria', methods=['GET'])
+def get_evaluation_criteria():
+    """
+    GET EVALUATION CRITERIA ENDPOINT
+    
+    Retrieves the evaluation criteria for the authenticated recruiter.
+    If no custom criteria exists, returns default values.
+    
+    Authentication: Required (JWT Bearer token - recruiter only)
+    
+    Response:
+        {
+            "success": true,
+            "criteria": {
+                "id": <criteria_id>,
+                "recruiter_id": <recruiter_id>,
+                "technical_skill": 50.0,
+                "psychometric_assessment": 15.0,
+                "soft_skill": 15.0,
+                "fairplay": 20.0,
+                "is_default": true/false,
+                "created_at": "ISO timestamp",
+                "updated_at": "ISO timestamp"
+            }
+        }
+        
+    Status Codes:
+        - 200: Success
+        - 401: Unauthorized
+        - 403: Forbidden (not a recruiter)
+        - 500: Server error
+    """
+    # Verify recruiter authentication
+    recruiter_id, error = verify_recruiter_token()
+    if error:
+        return error
+    
+    try:
+        # Check if criteria exists for this recruiter
+        criteria = EvaluationCriteria.query.filter_by(recruiter_id=recruiter_id).first()
+        
+        if not criteria:
+            # Return default values if no custom criteria exists
+            default_criteria = {
+                'id': None,
+                'recruiter_id': recruiter_id,
+                'technical_skill': 37.5,
+                'psychometric_assessment': 25.0,
+                'soft_skill': 25.0,
+                'fairplay': 12.5,
+                'is_default': True,
+                'created_at': None,
+                'updated_at': None
+            }
+            return jsonify({
+                'success': True,
+                'criteria': default_criteria
+            }), 200
+        
+        return jsonify({
+            'success': True,
+            'criteria': criteria.to_dict()
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"\n❌ GET EVALUATION CRITERIA ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+
+@RecruiterDashboard.route('/evaluation-criteria', methods=['POST', 'PUT'])
+def update_evaluation_criteria():
+    """
+    UPDATE EVALUATION CRITERIA ENDPOINT
+    
+    Creates or updates evaluation criteria for the authenticated recruiter.
+    Validates that all percentages sum to 100%.
+    
+    Authentication: Required (JWT Bearer token - recruiter only)
+    
+    Request Body:
+        {
+            "technical_skill": 50.0,          // Required, percentage (0-100)
+            "psychometric_assessment": 15.0,  // Required, percentage (0-100)
+            "soft_skill": 15.0,               // Required, percentage (0-100)
+            "fairplay": 20.0                  // Required, percentage (0-100)
+        }
+        
+    Validation:
+        - All percentages must be between 0 and 100
+        - Sum of all percentages must equal 100
+        
+    Response:
+        {
+            "success": true,
+            "message": "Evaluation criteria updated successfully",
+            "criteria": {<criteria_object>}
+        }
+        
+    Status Codes:
+        - 200: Success
+        - 400: Bad request (invalid data or percentages don't sum to 100)
+        - 401: Unauthorized
+        - 403: Forbidden (not a recruiter)
+        - 500: Server error
+    """
+    # Verify recruiter authentication
+    recruiter_id, error = verify_recruiter_token()
+    if error:
+        return error
+    
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['technical_skill', 'psychometric_assessment', 'soft_skill', 'fairplay']
+        missing_fields = [field for field in required_fields if field not in data]
+        
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'message': f'Missing required fields: {", ".join(missing_fields)}'
+            }), 400
+        
+        # Extract and validate percentages
+        technical_skill = float(data['technical_skill'])
+        psychometric_assessment = float(data['psychometric_assessment'])
+        soft_skill = float(data['soft_skill'])
+        fairplay = float(data['fairplay'])
+        
+        # Validate ranges
+        percentages = {
+            'technical_skill': technical_skill,
+            'psychometric_assessment': psychometric_assessment,
+            'soft_skill': soft_skill,
+            'fairplay': fairplay
+        }
+        
+        for field, value in percentages.items():
+            if value < 0 or value > 100:
+                return jsonify({
+                    'success': False,
+                    'message': f'{field} must be between 0 and 100'
+                }), 400
+        
+        # Validate that percentages sum to 100
+        total = technical_skill + psychometric_assessment + soft_skill + fairplay
+        if abs(total - 100.0) > 0.01:  # Allow for floating point precision
+            return jsonify({
+                'success': False,
+                'message': f'Percentages must sum to 100. Current sum: {total}'
+            }), 400
+        
+        # Check if criteria already exists
+        criteria = EvaluationCriteria.query.filter_by(recruiter_id=recruiter_id).first()
+        
+        if criteria:
+            # Update existing criteria
+            criteria.technical_skill = technical_skill
+            criteria.psychometric_assessment = psychometric_assessment
+            criteria.soft_skill = soft_skill
+            criteria.fairplay = fairplay
+            criteria.is_default = False
+            message = 'Evaluation criteria updated successfully'
+        else:
+            # Create new criteria
+            criteria = EvaluationCriteria(
+                recruiter_id=recruiter_id,
+                technical_skill=technical_skill,
+                psychometric_assessment=psychometric_assessment,
+                soft_skill=soft_skill,
+                fairplay=fairplay,
+                is_default=False
+            )
+            db.session.add(criteria)
+            message = 'Evaluation criteria created successfully'
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'criteria': criteria.to_dict()
+        }), 200
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid number format'
+        }), 400
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"\n❌ UPDATE EVALUATION CRITERIA ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }), 500
+
+
+@RecruiterDashboard.route('/evaluation-criteria/reset', methods=['POST'])
+def reset_evaluation_criteria():
+    """
+    RESET EVALUATION CRITERIA ENDPOINT
+    
+    Resets evaluation criteria to default recommended values (Ratio 1.5:1:1:0.5):
+    - Technical Skill: 37.5%
+    - Psychometric Assessment: 25%
+    - Soft Skill: 25%
+    - Fairplay: 12.5%
+    
+    Authentication: Required (JWT Bearer token - recruiter only)
+    
+    Response:
+        {
+            "success": true,
+            "message": "Evaluation criteria reset to defaults",
+            "criteria": {<criteria_object>}
+        }
+        
+    Status Codes:
+        - 200: Success
+        - 401: Unauthorized
+        - 403: Forbidden (not a recruiter)
+        - 500: Server error
+    """
+    # Verify recruiter authentication
+    recruiter_id, error = verify_recruiter_token()
+    if error:
+        return error
+    
+    try:
+        # Check if criteria exists
+        criteria = EvaluationCriteria.query.filter_by(recruiter_id=recruiter_id).first()
+        
+        if criteria:
+            # Update to default values
+            criteria.technical_skill = 37.5
+            criteria.psychometric_assessment = 25.0
+            criteria.soft_skill = 25.0
+            criteria.fairplay = 12.5
+            criteria.is_default = True
+        else:
+            # Create with default values
+            criteria = EvaluationCriteria(
+                recruiter_id=recruiter_id,
+                technical_skill=37.5,
+                psychometric_assessment=25.0,
+                soft_skill=25.0,
+                fairplay=12.5,
+                is_default=True
+            )
+            db.session.add(criteria)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Evaluation criteria reset to defaults',
+            'criteria': criteria.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"\n❌ RESET EVALUATION CRITERIA ERROR: {str(e)}")
         print(traceback.format_exc())
         return jsonify({
             'success': False,

@@ -13,7 +13,10 @@ def create_app():
     app.config.from_object(Config)
     
     # Enable CORS for all routes (allow frontend to communicate)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={
+        r"/api/*": {"origins": "*"},
+        r"/recruiter-dashboard/*": {"origins": "*"}
+    })
     
     # PostgreSQL config (override if needed for SSL)
     if app.config["SQLALCHEMY_DATABASE_URI"]:
@@ -37,7 +40,7 @@ def create_app():
     
     # Recruiter dashboard routes (separate from auth)
     from .RecruiterDashboard import RecruiterDashboard
-    app.register_blueprint(RecruiterDashboard, url_prefix='/api/recruiter')
+    app.register_blueprint(RecruiterDashboard, url_prefix='/recruiter-dashboard')
     
     # Resume management routes
     from .Resume import Resume
