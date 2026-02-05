@@ -279,9 +279,10 @@ class ProctorSession(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False)
-    assessment_id = db.Column(db.String(100), nullable=True)  # ID of the assessment being monitored
-    session_uuid = db.Column(db.String(36), unique=True, nullable=True)  # UUID for frontend/API
-    start_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    assessment_id = db.Column(db.String(100), nullable=True)  # New field
+    session_uuid = db.Column(db.String(100), unique=True, nullable=False)
+    violation_counts = db.Column(db.JSON, default=dict) # Kept for DB compatibility
+    start_time = db.Column(db.DateTime, default=datetime.utcnow)
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='active')  # active, completed, terminated
     

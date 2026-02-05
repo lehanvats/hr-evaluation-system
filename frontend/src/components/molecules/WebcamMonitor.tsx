@@ -5,95 +5,29 @@ import { cn } from '@/lib/utils';
 
 interface WebcamMonitorProps {
   className?: string;
-  onFrameCapture?: (base64Image: string) => void;
-  status?: 'active' | 'warning' | 'error' | 'idle';
+  stream?: MediaStream | null; // Stream to display
+  status: 'active' | 'warning' | 'error' | 'idle';
 }
 
 type MonitoringStatus = 'active' | 'warning' | 'error' | 'idle';
 
-export function WebcamMonitor({ className, onFrameCapture, status: externalStatus }: WebcamMonitorProps) {
+export function WebcamMonitor({ className, stream, status: externalStatus }: WebcamMonitorProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [status, setStatus] = useState<MonitoringStatus>(externalStatus || 'active');
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null); // Internal ref
 
-  // Initialize webcam stream
+  // Assign stream to video element when stream changes
   useEffect(() => {
-    const startWebcam = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 }
-        });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        setHasPermission(true);
-        setStatus('active');
-      } catch (error) {
-        console.error('Failed to access webcam:', error);
-        setHasPermission(false);
-        setStatus('error');
-      }
-    };
-
-    startWebcam();
-
-    return () => {
-      // Cleanup stream on unmount only
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-    };
-  }, []);
-
-  // Capture frames periodically and send for analysis
-  useEffect(() => {
-    if (!onFrameCapture || !hasPermission) return;
-
-    const captureFrame = () => {
-      const video = videoRef.current;
-      if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-      try {
-        // Create canvas to capture frame
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        if (!ctx) return;
-
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const base64Image = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-        onFrameCapture(base64Image);
-      } catch (error) {
-        console.error('Frame capture error:', error);
-      }
-    };
-
-    const captureInterval = setInterval(captureFrame, 1000); // Capture every 1 second for exam monitoring
-
-
-    return () => clearInterval(captureInterval);
-  }, [onFrameCapture, hasPermission]);
-
-  // Update status when external status changes
-  useEffect(() => {
-    if (externalStatus) {
-      setStatus(externalStatus);
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(e => console.error("Webcam play failed", e));
     }
+  }, [stream]);
+
+  // Update status
+  useEffect(() => {
+    if (externalStatus) setStatus(externalStatus);
   }, [externalStatus]);
-
-  // Ensure video plays when minimized state changes
-  useEffect(() => {
-    if (videoRef.current && streamRef.current && !isMinimized) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(e => console.error('Video play error:', e));
-    }
-  }, [isMinimized]);
 
   const statusConfig = {
     active: {
@@ -176,11 +110,11 @@ export function WebcamMonitor({ className, onFrameCapture, status: externalStatu
 
       {/* Webcam Preview Area */}
       <div className="relative aspect-video bg-muted/50">
-        {hasPermission === false ? (
+        {!stream ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
             <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-xs text-muted-foreground">
-              Camera access required
+              Initializing Camera...
             </p>
           </div>
         ) : (
@@ -216,3 +150,4 @@ export function WebcamMonitor({ className, onFrameCapture, status: externalStatu
     </div>
   );
 }
+

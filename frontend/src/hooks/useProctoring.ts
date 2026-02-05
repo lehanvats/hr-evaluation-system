@@ -23,30 +23,58 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
 
     const monitorInterval = useRef<NodeJS.Timeout | null>(null);
 
+    // Local violation counts (Client-side aggregation)
+    const violationCountsRef = useRef<Record<string, number>>({
+        no_face: 0,
+        multiple_faces: 0,
+        looking_away: 0,
+        phone_detected: 0,
+        tab_switch: 0,
+        mouse_exit: 0,
+        print_screen: 0,
+        copy_paste: 0
+    });
+
     const startSession = useCallback(async () => {
+        setIsMonitoring(true);
         try {
-            // 1. Call backend to start session
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/session/start`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${API_URL}/api/proctor/session/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('candidate_token')}`
                 },
-                body: JSON.stringify({ assessment_id: assessmentId })
+                body: JSON.stringify({
+                    assessment_id: assessmentId
+                })
             });
-            const data = await response.json();
 
-            if (data.success) {
+            if (response.ok) {
+                const data = await response.json();
                 setSessionId(data.session_id);
-                setIsMonitoring(true);
+                // Reset counts on new session
+                violationCountsRef.current = {
+                    no_face: 0,
+                    multiple_faces: 0,
+                    looking_away: 0,
+                    phone_detected: 0,
+                    tab_switch: 0,
+                    mouse_exit: 0,
+                    print_screen: 0,
+                    copy_paste: 0
+                };
                 setStatus('active');
                 return data.session_id;
+            } else {
+                setStatus('error');
+                return null;
             }
-        } catch (e) {
-            console.error("Failed to start proctoring session", e);
+        } catch (error) {
+            console.error('Failed to start proctoring session', error);
             setStatus('error');
+            return null;
         }
-        return null;
     }, [assessmentId]);
 
     const stopSession = useCallback(async () => {
@@ -57,27 +85,11 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
             monitorInterval.current = null;
         }
 
-        if (sessionId) {
-            try {
-                await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/session/end`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('candidate_token')}`
-                    },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-            } catch (e) {
-                console.error("Failed to end proctoring session", e);
-            }
-        }
-    }, [sessionId]);
-
-    const logViolation = useCallback(async (violationType: string, violationData: any) => {
-        if (!sessionId) return;
-
         try {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/log-violation`, {
+            // Send FINAL updated counts to backend
+            console.log('📝 Submitting Proctored Session. Final Counts:', violationCountsRef.current);
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            await fetch(`${API_URL}/api/proctor/session/end`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -85,13 +97,31 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
                 },
                 body: JSON.stringify({
                     session_id: sessionId,
-                    violation_type: violationType,
-                    violation_data: violationData
+                    violation_counts: violationCountsRef.current // Send the aggregated counts
                 })
             });
-        } catch (e) {
-            console.error("Failed to log violation", e);
+
+            setSessionId(null);
+        } catch (error) {
+            console.error('Failed to stop proctoring session', error);
         }
+    }, [sessionId]);
+
+    const logViolation = useCallback(async (violationType: string, violationData: any) => {
+        if (!sessionId) return;
+
+        // Client-side aggregation ONLY
+        if (violationCountsRef.current[violationType] !== undefined) {
+            violationCountsRef.current[violationType] = (violationCountsRef.current[violationType] || 0) + 1;
+        } else {
+            // Handle unknown types safely
+            violationCountsRef.current[violationType] = 1;
+        }
+
+        console.log(`[Proctor Local Log] ${violationType} count: ${violationCountsRef.current[violationType]}`);
+
+        // REMOVED: Real-time DB logging
+        // await fetch(...)
     }, [sessionId]);
 
     const analyzeFrame = useCallback(async (base64Image: string) => {
@@ -166,6 +196,7 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
         lastAnalysis,
         startSession,
         stopSession,
-        analyzeFrame
+        analyzeFrame,
+        logViolation // Add for client-side violation logging
     };
 }

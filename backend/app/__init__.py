@@ -13,10 +13,8 @@ def create_app():
     app.config.from_object(Config)
     
     # Enable CORS for all routes (allow frontend to communicate)
-    CORS(app, resources={
-        r"/api/*": {"origins": "*"},
-        r"/recruiter-dashboard/*": {"origins": "*"}
-    })
+    # Simple global CORS configuration
+    CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
     # PostgreSQL config (override if needed for SSL)
     if app.config["SQLALCHEMY_DATABASE_URI"]:

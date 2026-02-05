@@ -14,10 +14,10 @@ interface ActivityEvent {
 interface ActivityMonitorProps {
     className?: string;
     onToggle?: (visible: boolean) => void;
-    sessionId?: string; // Proctoring session ID for backend logging
+    onViolation: (type: string, details?: any) => void;
 }
 
-export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMonitorProps) {
+export function ActivityMonitor({ className, onToggle, onViolation }: ActivityMonitorProps) {
     const [events, setEvents] = useState<ActivityEvent[]>([]);
     const [keystrokeCount, setKeystrokeCount] = useState(0);
     const [copyCount, setCopyCount] = useState(0);
@@ -25,26 +25,9 @@ export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMoni
     const [suspiciousCount, setSuspiciousCount] = useState(0);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Helper function to log activity to backend
-    const logActivityToBackend = async (type: string, details?: any) => {
-        if (!sessionId) return; // Only log if we have a session
-
-        try {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/proctor/log-violation`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('candidate_token')}`
-                },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    violation_type: type,
-                    violation_data: { details, timestamp: new Date().toISOString() }
-                })
-            });
-        } catch (error) {
-            console.error('Failed to log activity:', error);
-        }
+    // logActivityToBackend removed - using onViolation prop instead
+    const logActivity = (type: string, details?: any) => {
+        onViolation(type, details);
     };
 
     const toggleCollapse = () => {
@@ -58,7 +41,17 @@ export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMoni
             // Don't count modifier keys alone
             if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
                 setKeystrokeCount(prev => prev + 1);
-                // Don't add keystrokes to event log - too noisy
+            }
+
+            // Detect PrintScreen
+            if (e.key === 'PrintScreen') {
+                setSuspiciousCount(prev => prev + 1);
+                addEvent({
+                    type: 'keystroke', // Re-using keystroke type for icon, but logging specific type
+                    timestamp: new Date(),
+                    details: 'PrintScreen detected'
+                });
+                logActivity('print_screen', 'Screenshot attempt detected');
             }
         };
 
@@ -77,7 +70,7 @@ export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMoni
                 details: 'Text copied to clipboard'
             });
             // Log to backend
-            logActivityToBackend('copy_paste', 'Text copied to clipboard');
+            logActivity('copy_paste', 'Text copied to clipboard');
         };
 
         const handlePaste = () => {
@@ -89,7 +82,7 @@ export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMoni
                 details: 'Text pasted from clipboard'
             });
             // Log to backend
-            logActivityToBackend('copy_paste', 'Text pasted from clipboard');
+            logActivity('copy_paste', 'Text pasted from clipboard');
         };
 
         window.addEventListener('copy', handleCopy);
@@ -111,7 +104,7 @@ export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMoni
                 details: 'Mouse left assessment window'
             });
             // Log to backend
-            logActivityToBackend('mouse_exit', 'Mouse left assessment window');
+            logActivity('mouse_exit', 'Mouse left assessment window');
         };
 
         document.addEventListener('mouseleave', handleMouseLeave);
@@ -129,7 +122,7 @@ export function ActivityMonitor({ className, onToggle, sessionId }: ActivityMoni
                     details: 'Window/tab switched'
                 });
                 // Log to backend
-                logActivityToBackend('tab_switch', 'Window/tab switched');
+                logActivity('tab_switch', 'Window/tab switched');
             }
         };
 

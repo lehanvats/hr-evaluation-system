@@ -52,37 +52,94 @@ def verify_candidate_token():
 
 @ProctorService.route('/session/start', methods=['POST'])
 def start_session():
-    user_id = verify_candidate_token()
-    if not user_id:
-        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        user_id = verify_candidate_token()
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        data = request.json or {}
+        assessment_id = data.get('assessment_id')
         
-    # Generate simple session ID (timestamp + user_id)
-    import uuid
-    session_uuid = str(uuid.uuid4())
-    
-    # Create new session record
-    session = ProctorSession(
-        candidate_id=user_id,
-        session_uuid=session_uuid,
-        status='active'
-    )
-    db.session.add(session)
-    db.session.commit()
-    
-    return jsonify({
-        'success': True,
-        'session_id': session_uuid,
-        'message': 'Proctoring session started'
-    })
+        # Generate simple session ID (timestamp + user_id)
+        import uuid
+        session_uuid = str(uuid.uuid4())
+        
+        # Create new session record
+        session = ProctorSession(
+            candidate_id=user_id,
+            assessment_id=assessment_id,
+            session_uuid=session_uuid,
+            status='active'
+        )
+        db.session.add(session)
+        db.session.commit()
+        
+        print(f"[PROCTOR] Session started: {session_uuid} for user {user_id}")
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_uuid,
+            'message': 'Proctoring session started'
+        })
+    except Exception as e:
+        import traceback
+        print(f"[PROCTOR ERROR] Failed to start session: {str(e)}")
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @ProctorService.route('/session/end', methods=['POST'])
 def end_session():
-    user_id = verify_candidate_token()
-    if not user_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    # Session end is just acknowledged, violations already logged
-    return jsonify({'success': True})
+    try:
+        user_id = verify_candidate_token()
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        # Find active session for this user
+        session = ProctorSession.query.filter_by(
+            candidate_id=user_id,
+            status='active'
+        ).order_by(ProctorSession.start_time.desc()).first()
+        
+        if not session:
+            # If no active session, just return success (idempotent)
+            return jsonify({'success': True, 'message': 'No active session found'})
+            
+        # Get counts from request payload
+        counts = request.json.get('violation_counts', {
+            "no_face": 0,
+            "multiple_faces": 0,
+            "looking_away": 0,
+            "phone_detected": 0,
+            "tab_switch": 0,
+            "mouse_exit": 0,
+            "print_screen": 0,
+            "copy_paste": 0
+        })
+        
+        # Verify it's a dict (basic validation)
+        if not isinstance(counts, dict):
+            counts = {}
+
+        # Update session
+        session.violation_counts = counts
+        session.end_time = datetime.utcnow()
+        session.status = 'completed'
+        
+        db.session.commit()
+        
+        print(f"[PROCTOR] Session ended: {session.session_uuid}. Final Counts: {counts}")
+        
+        return jsonify({
+            'success': True,
+            'violation_counts': counts
+        })
+    except Exception as e:
+        import traceback
+        print(f"[PROCTOR ERROR] Failed to end session: {str(e)}")
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': 'Failed to end session'}), 500
 
 @ProctorService.route('/log-event', methods=['POST'])
 def log_event():

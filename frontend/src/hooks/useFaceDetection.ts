@@ -22,9 +22,11 @@ export function useFaceDetection({
     const [isDetecting, setIsDetecting] = useState(false);
     const [violations, setViolations] = useState<ViolationEvent[]>([]);
     const [lastDetection, setLastDetection] = useState<faceapi.FaceDetection[] | null>(null);
+    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    // Refs
     const streamRef = useRef<MediaStream | null>(null);
+    const hiddenVideoRef = useRef<HTMLVideoElement | null>(null);
     const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Load face-api.js models
@@ -43,18 +45,52 @@ export function useFaceDetection({
         loadModels();
     }, []);
 
+    // Create hidden video element for face detection
+    useEffect(() => {
+        // Create a hidden video element that will be used by face-api.js
+        const video = document.createElement('video');
+        video.setAttribute('autoplay', '');
+        video.setAttribute('muted', '');
+        video.setAttribute('playsinline', '');
+        video.style.position = 'absolute';
+        video.style.left = '-9999px'; // Off-screen
+        video.style.width = '640px';
+        video.style.height = '480px';
+        document.body.appendChild(video);
+        hiddenVideoRef.current = video;
+
+        console.log('[FaceDetection] Hidden video element created');
+
+        return () => {
+            if (hiddenVideoRef.current) {
+                document.body.removeChild(hiddenVideoRef.current);
+                hiddenVideoRef.current = null;
+            }
+        };
+    }, []);
+
     // Start webcam
     const startCamera = useCallback(async () => {
         try {
+            console.log('[FaceDetection] Requesting camera access...');
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480 }
             });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+            setMediaStream(stream);
+
+            // Attach stream to hidden video for face detection
+            if (hiddenVideoRef.current) {
+                hiddenVideoRef.current.srcObject = stream;
+                try {
+                    await hiddenVideoRef.current.play();
+                    console.log('[FaceDetection] ✅ Hidden video playing');
+                } catch (e) {
+                    console.error('[FaceDetection] Hidden video play failed', e);
+                }
             }
-            console.log('[FaceDetection] ✅ Camera started');
+
+            console.log('[FaceDetection] ✅ Camera started, stream available');
         } catch (error) {
             console.error('[FaceDetection] ❌ Camera access failed:', error);
         }
@@ -65,9 +101,10 @@ export function useFaceDetection({
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
+            setMediaStream(null);
         }
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
+        if (hiddenVideoRef.current) {
+            hiddenVideoRef.current.srcObject = null;
         }
         console.log('[FaceDetection] Camera stopped');
     }, []);
@@ -86,20 +123,33 @@ export function useFaceDetection({
         console.log(`[FaceDetection] 🚨 Violation: ${type}`, details);
     }, [onViolation]);
 
-    // Face detection loop
+    // Camera Lifecycle (Start/Stop independent of detection toggle)
     useEffect(() => {
-        if (!enabled || !isReady || !videoRef.current) return;
-
         startCamera();
+        return () => stopCamera();
+    }, [startCamera, stopCamera]);
+
+    // Face detection loop (Depends on enabled / isReady)
+    useEffect(() => {
+        if (!enabled || !isReady) {
+            console.log(`[FaceDetection] Detection not starting: enabled=${enabled}, isReady=${isReady}`);
+            return;
+        }
+
+        if (!hiddenVideoRef.current) {
+            console.log('[FaceDetection] Hidden video not ready yet');
+            return;
+        }
 
         const detect = async () => {
-            if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
+            const video = hiddenVideoRef.current;
+            if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) {
                 return;
             }
 
             try {
                 const detections = await faceapi.detectAllFaces(
-                    videoRef.current,
+                    video,
                     new faceapi.TinyFaceDetectorOptions()
                 );
 
@@ -118,6 +168,7 @@ export function useFaceDetection({
             }
         };
 
+        console.log('[FaceDetection] Starting detection loop...');
         setIsDetecting(true);
         detectionIntervalRef.current = setInterval(detect, detectionInterval);
 
@@ -126,32 +177,12 @@ export function useFaceDetection({
             if (detectionIntervalRef.current) {
                 clearInterval(detectionIntervalRef.current);
             }
-            stopCamera();
+            console.log('[FaceDetection] Detection loop stopped');
         };
-    }, [enabled, isReady, detectionInterval, addViolation, startCamera, stopCamera]);
+    }, [enabled, isReady, detectionInterval, addViolation]);
 
-    // Tab switch detection
-    useEffect(() => {
-        if (!enabled) return;
-
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                addViolation('tab_switch');
-            }
-        };
-
-        const handleBlur = () => {
-            addViolation('window_blur');
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('blur', handleBlur);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('blur', handleBlur);
-        };
-    }, [enabled, addViolation]);
+    // Tab switch detection removed (handled by ActivityMonitor)
+    // useEffect(() => { ... }, []);
 
     // Clear violations
     const clearViolations = useCallback(() => {
@@ -159,7 +190,7 @@ export function useFaceDetection({
     }, []);
 
     return {
-        videoRef,
+        stream: mediaStream, // For display in WebcamMonitor
         isReady,
         isDetecting,
         violations,
@@ -168,3 +199,4 @@ export function useFaceDetection({
         clearViolations
     };
 }
+

@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { mcqApi, candidateApi, psychometricApi } from '@/lib/api';
 import { useProctoring } from '@/hooks/useProctoring';
+import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection'; // Re-added
 import { useCodePlayback } from '@/hooks/useCodePlayback';
 
 interface ConsoleLog {
@@ -86,12 +87,22 @@ export default function Assessment() {
     status: proctorStatus,
     startSession: startProctorSession,
     stopSession: stopProctorSession,
-    analyzeFrame
+    logViolation // We use this to log client-side violations to backend
   } = useProctoring({
-    assessmentId: id,
-    onViolation: (type, data) => {
-      console.log(`🚨 Proctoring violation: ${type}`, data);
+    assessmentId: id
+  });
+
+  // Client-Side Face Detection
+  const { stream } = useFaceDetection({
+    enabled: isMonitoring, // Only detect when session is active
+    detectionInterval: 500, // Fast 500ms checks (no rate limits!)
+    onViolation: (event: ViolationEvent) => {
+      const { type, details } = event;
+      console.log(`🚨 Proctoring violation: ${type}`, details);
       addLog('error', `Security Alert: ${type.replace('_', ' ')}`);
+
+      // Log to backend
+      logViolation(type, details);
     }
   });
 
@@ -844,13 +855,16 @@ export default function Assessment() {
       <div className="fixed bottom-4 left-4 z-50 flex gap-3">
         {/* Webcam Monitor */}
         <WebcamMonitor
-          onFrameCapture={analyzeFrame}
+          stream={stream}
           status={proctorStatus}
           className=""
         />
 
         {/* Activity Monitor */}
-        <ActivityMonitor className="w-64" />
+        <ActivityMonitor
+          className="w-64"
+          onViolation={logViolation}
+        />
       </div>
 
       {/* Unanswered Questions Warning Dialog */}
