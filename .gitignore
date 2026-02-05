@@ -28,6 +28,8 @@ venv
 *.njsproj
 *.sln
 *.sw?
-
+placeholder_functions.py
+prompt_testing.py
+example.txt
 /sample_bulk_upload.csv
 /sample_mcq_upload.csv
