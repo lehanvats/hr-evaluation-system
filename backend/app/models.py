@@ -324,6 +324,7 @@ class ProctorSession(db.Model):
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='active')  # active, completed, terminated
+    grading_json = db.Column(db.JSON, nullable=True)  # AI grading result for proctoring
     
     # Heartbeat and suspension tracking
     last_activity = db.Column(db.DateTime, default=datetime.utcnow)

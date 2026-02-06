@@ -771,8 +771,11 @@ def get_candidates():
             # Fetch from TextAssessmentResult instead of Psychometric
             text_result = db.session.query(TextAssessmentResult).filter_by(candidate_id=candidate.id).first()
             if text_result and text_result.grading_json:
-                # Expecting 'communication_score' or 'score' in grading_json
-                soft_skill_score = text_result.grading_json.get('communication_score', 0)
+                # Try communication_score (new format with grading)
+                soft_skill_score = text_result.grading_json.get('communication_score', None)
+                # Fallback for old format that only has 'remark'
+                if soft_skill_score is None:
+                    soft_skill_score = 50 if text_result.grading_json.get('remark') else 0
             else:
                 soft_skill_score = 0
                 
@@ -1281,22 +1284,46 @@ def get_candidate_detail(candidate_id):
         ai_rationale = ""
         
         if rationale_record and rationale_record.rationale_json:
-            # Format the JSON into a readable string for the frontend
+            # Format the JSON into readable paragraphs with emoji headings (no markdown bold)
             r_json = rationale_record.rationale_json
+            sections = []
             
-            # Construct summary
-            if 'final_decision' in r_json and 'summary' in r_json['final_decision']:
-                 ai_rationale += f"{r_json['final_decision']['summary']}\n\n"
-                 
-            # Add Psychometric Insight if available (and specifically requested "neat paragraph")
-            if 'psychometric_evaluation' in r_json and 'reasoning' in r_json['psychometric_evaluation']:
-                ai_rationale += f"Psychometric Analysis: {r_json['psychometric_evaluation']['reasoning']}\n\n"
-                
-            # Add Technical/Soft Skill quick notes if not covered
+            if 'resume_fit' in r_json:
+                grade = r_json['resume_fit'].get('grade', 'N/A')
+                reasoning = r_json['resume_fit'].get('reasoning', '')
+                sections.append(f"📄 Resume Fit ({grade})\n{reasoning}")
+            
             if 'technical_evaluation' in r_json:
-                ai_rationale += f"Technical: {r_json['technical_evaluation'].get('grade', 'N/A')}. "
+                grade = r_json['technical_evaluation'].get('grade', 'N/A')
+                reasoning = r_json['technical_evaluation'].get('reasoning', '')
+                sections.append(f"🔧 Technical Skills ({grade})\n{reasoning}")
+            
+            if 'coding_evaluation' in r_json:
+                grade = r_json['coding_evaluation'].get('grade', 'N/A')
+                reasoning = r_json['coding_evaluation'].get('reasoning', '')
+                sections.append(f"💻 Coding Skills ({grade})\n{reasoning}")
+            
             if 'soft_skills_evaluation' in r_json:
-                ai_rationale += f"Soft Skills: {r_json['soft_skills_evaluation'].get('grade', 'N/A')}."
+                grade = r_json['soft_skills_evaluation'].get('grade', 'N/A')
+                reasoning = r_json['soft_skills_evaluation'].get('reasoning', '')
+                sections.append(f"💬 Soft Skills ({grade})\n{reasoning}")
+            
+            if 'psychometric_evaluation' in r_json:
+                grade = r_json['psychometric_evaluation'].get('grade', 'N/A')
+                reasoning = r_json['psychometric_evaluation'].get('reasoning', '')
+                sections.append(f"🧠 Psychometric Insight ({grade})\n{reasoning}")
+            
+            if 'integrity_observation' in r_json:
+                status = r_json['integrity_observation'].get('status', 'N/A')
+                reasoning = r_json['integrity_observation'].get('reasoning', '')
+                sections.append(f"🔒 Integrity ({status})\n{reasoning}")
+            
+            if 'final_decision' in r_json:
+                status = r_json['final_decision'].get('status', 'N/A')
+                summary = r_json['final_decision'].get('summary', '')
+                sections.append(f"✅ Final Verdict: {status}\n{summary}")
+            
+            ai_rationale = "\n\n".join(sections)
                 
         else:
             # Fallback to placeholder if no AI generation exists yet

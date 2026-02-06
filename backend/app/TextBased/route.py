@@ -9,7 +9,7 @@ from ..models import TextBasedQuestion, TextBasedAnswer, CandidateAuth as Candid
 from ..extensions import db
 from ..config import Config
 from ..auth_helpers import verify_candidate_token, verify_recruiter_token
-from services.textresponse_to_grading import evaluate_text_responses
+from services.textresponse_to_grading import evaluate_text_responses, grade_text_responses
 import json
 import jwt
 from datetime import datetime
@@ -327,15 +327,21 @@ def complete_text_based_test():
             if qa_pairs:
                 grading_result = evaluate_text_responses(qa_pairs)
                 
+                # Grade each response 0-100 and compute average communication_score
+                grades_result = grade_text_responses(grading_result)
+                
+                # Merge grades and communication_score into the grading result
+                grading_result['grades'] = grades_result.get('grades', [])
+                grading_result['communication_score'] = grades_result.get('communication_score', 0)
+                
                 # Save to TextAssessmentResult
                 text_result = TextAssessmentResult.query.filter_by(candidate_id=candidate_id).first()
                 if not text_result:
                     text_result = TextAssessmentResult(candidate_id=candidate_id)
                     db.session.add(text_result)
                 
-                # evaluate_text_responses returns a dict (json.loads done inside function)
                 text_result.grading_json = grading_result
-                print(f"✅ Text Assessment Graded: {grading_result.get('remark')}")
+                print(f"✅ Text Assessment Graded: communication_score={grading_result.get('communication_score')}, remark={grading_result.get('overall_remark', grading_result.get('remark'))}")
                 
         except Exception as e:
             print(f"⚠️ Text Assessment Grading failed: {e}")

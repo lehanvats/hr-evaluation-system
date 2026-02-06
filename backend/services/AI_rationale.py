@@ -17,20 +17,20 @@ def generate_final_rationale(resume_data, mcq_score, text_remark, psychometric_a
     Output: JSON object with final verdict.
     """
     prompt = f"""
-    Act as a Senior Technical Recruiter and Assessment Expert.
-    Your goal is to provide a comprehensive, transparent, and balanced evaluation of the candidate.
-    
+    Act as a Senior Technical Recruiter and Assessment Expert writing a polished candidate evaluation report.
+    Your goal is to provide a comprehensive, transparent, and balanced evaluation that reads like a professional hiring committee memo.
+
     DATA PROVIDED:
-    
+
     1. RESUME DATA:
     {json.dumps(resume_data, indent=2) if isinstance(resume_data, dict) else resume_data}
-    
+
     2. TECHNICAL SCORE (MCQ Based):
     {json.dumps(mcq_score, indent=2) if isinstance(mcq_score, dict) else mcq_score}
-    
+
     3. SOFT SKILLS (Text Assessment Based):
     {json.dumps(text_remark, indent=2) if isinstance(text_remark, dict) else text_remark}
-    
+
     4. PSYCHOMETRIC TRAITS (For Reference Only - Do NOT grade pass/fail):
     {json.dumps(psychometric_analysis, indent=2) if isinstance(psychometric_analysis, dict) else psychometric_analysis}
 
@@ -39,64 +39,121 @@ def generate_final_rationale(resume_data, mcq_score, text_remark, psychometric_a
 
     6. PROCTORING / INTEGRITY (Malpractice Check):
     {json.dumps(proctor_data, indent=2) if isinstance(proctor_data, dict) else proctor_data}
-    
+
     INSTRUCTIONS:
-    Analyze the candidate data to produce a Final Rationale Report.
-    
-    SCORING RULES:
-    - Write each section as a DETAILED PARAGRAPH (3-5 sentences each).
-    - PRIORITIZE: Resume Fit -> describe why the resume fits or doesn't fit in detail.
-    - Coding Skills: Detailed analysis of coding performance, problems solved, code quality.
-    - Soft Skills: Detailed analysis of communication, clarity, professionalism from Text Assessment.
-    - Psychometric: Brief personality insight (2-3 sentences). Low priority for hiring decision.
-    
-    INTEGRITY RULES (IMPORTANT):
-    - If Integrity/Fairplay score is ABOVE 50: Do NOT penalize the candidate. Consider it acceptable.
-    - If Integrity/Fairplay score is BELOW 50: Mention this as an observation ONLY. Do NOT let it affect the hiring decision. Simply inform the recruiter that there were some concerns.
-    - NEVER reject a candidate solely based on integrity score. It is informational only.
-    
-    FORMAT REQUIREMENTS:
-    - Each section should be a FULL PARAGRAPH, not a single sentence.
-    - Use professional language and provide specific insights.
-    - Cite actual scores and data in your reasoning.
-    
-    CRITICALITY GUIDELINES:
-    - Be fair: If a candidate has a good Technical Score (e.g. >70%), they should generally NOT be rated "Poor" overall unless Soft Skills are terrible.
-    - Contextualize: High Technical + Low Soft Skills = Potential Individual Contributor. Low Technical + High Soft Skills = Potential Jr/Support role.
-    
-    TRANSPARENCY REQUIREMENT:
-    - In the "reasoning" for each section, explicitely cite the scores (e.g., "...given the Technical Score of 85%..." or "...Communication Score of 75/100...").
-    
+    Produce a Final Rationale Report. Each "reasoning" / "summary" field must be a RICH, FLOWING NARRATIVE PARAGRAPH — not bullet points, not a single sentence.
+
+    ── WRITING STYLE (CRITICAL — follow exactly) ──
+
+    Resume Fit:
+    • 4-6 sentences. Open by naming the candidate and their strongest skill areas drawn from resume_data (languages, frameworks, tools).
+    • Reference specific projects listed in the resume by name and explain what they demonstrate (e.g., "The Lung Disease Classification CNN project showcases their ability to work on complex deep-learning problems").
+    • Mention education, GPA, and institution by name.
+    • Close with an overall fit statement ("Overall, the candidate's resume demonstrates a strong/average/poor fit for a technical role…").
+
+    Technical Skills:
+    • 4-5 sentences. Lead with the exact percentage and fraction (e.g., "The candidate's Technical Score of 50.0%, with 5 correct answers out of 10, indicates…").
+    • Contrast the MCQ result with what the resume claims — note if the resume skills are impressive but the score doesn't fully reflect that, or vice-versa.
+    • Mention whether additional training might be needed, or if the score confirms strong expertise.
+
+    Coding Skills:
+    • 4-5 sentences. State how many problems the candidate solved fully out of the total attempted.
+    • Name the specific problems from the coding data and their individual scores (e.g., "a score of 100.0 for the 'Container With Most Water' problem").
+    • If there were errors (runtime error, wrong answer, TLE), mention them by problem name and error type.
+    • Close with an overall coding ability summary.
+
+    Soft Skills:
+    • 4-5 sentences. Reference the text assessment remark/scores directly (e.g., "The remark states that the candidate's communication skills and depth of understanding are lacking…").
+    • Explain the impact: how poor or strong soft skills would affect teamwork, communication, and collaboration.
+    • If soft skills are weak but technical skills are strong, note that contrast explicitly.
+
+    Psychometric Insight:
+    • 2-3 sentences only. Translate raw trait tendencies into behavioral language (e.g., "tends to be introverted", "demonstrates creativity and imaginative thinking").
+    • Mention potential strengths and areas of concern in personality. Do NOT pass/fail — this is informational insight only.
+
+    Integrity:
+    • 2-3 sentences. If severity/remark mentions issues (multiple faces, tab switches, etc.), describe them factually (e.g., "'Multiple faces detected frequently. Potential collaboration'").
+    • Explicitly state: "this observation should not affect the hiring decision" and "the candidate should not be penalized solely based on this score."
+    • If score > 50 or severity is low, mark as Acceptable with a brief positive note.
+
+    Final Verdict:
+    • 5-7 sentences. Synthesize ALL sections into a cohesive narrative.
+    • Name the candidate. Restate their strongest areas and their weakest areas.
+    • Explain why the chosen status (Hire / No Hire / Strong Hire / Consider for Future) is appropriate.
+    • If "Consider for Future", specify what the candidate should improve.
+    • End with a clear recommendation sentence (e.g., "Therefore, it is recommended to consider [Name] for future opportunities, rather than making an immediate hiring decision.").
+
+    ── SCORING / GRADING RULES ──
+
+    Resume Fit Grade:
+    - Excellent: Resume clearly aligns with role, strong projects, relevant skills, strong education.
+    - Good: Mostly aligned, some gaps.
+    - Average: Partial alignment.
+    - Poor: Minimal relevance.
+
+    Technical Grade:
+    - Excellent: >80%
+    - Good: 60-80%
+    - Average: 40-60%
+    - Poor: <40%
+
+    Coding Grade:
+    - Excellent: All problems solved with high scores and clean code.
+    - Good: Most problems solved, minor issues.
+    - Average: Mixed results, some solved, some errors.
+    - Poor: Most problems failed or not attempted.
+
+    Soft Skills Grade:
+    - Excellent: Clear, articulate, professional, thoughtful responses.
+    - Good: Adequate communication, minor issues.
+    - Average: Some clarity issues but passable.
+    - Poor: Lacking clarity, coherence, depth.
+
+    ── INTEGRITY RULES (IMPORTANT) ──
+    - If Integrity/Fairplay score is ABOVE 50 or severity is "Low"/"None": Mark as "Acceptable". Do NOT penalize.
+    - If Integrity/Fairplay score is BELOW 50 or severity is "Moderate"/"Severe": Mark as "Observation". Describe the concern factually but explicitly state it should NOT affect the hiring decision.
+    - NEVER reject a candidate solely based on integrity score.
+
+    ── FAIRNESS & CRITICALITY ──
+    - If Technical Score > 70%, do NOT rate the candidate "Poor" overall unless Soft Skills are terrible.
+    - High Technical + Low Soft Skills → potential Individual Contributor role.
+    - Low Technical + High Soft Skills → potential Junior/Support role.
+
+    ── TRANSPARENCY ──
+    - Always cite exact scores, percentages, and fractions in the reasoning (e.g., "given the Technical Score of 85%", "5 correct out of 10", "Communication Score of 75/100").
+    - Always name the candidate where relevant.
+    - Always reference specific project names, problem names, and assessment remarks.
+
     OUTPUT FORMAT:
     Return ONLY valid JSON in the following format:
     {{
         "resume_fit": {{
             "grade": "Excellent" | "Good" | "Average" | "Poor",
-            "reasoning": "3-5 sentences. Detailed analysis of how well the resume matches the role requirements."
+            "reasoning": "4-6 sentences. Rich narrative paragraph analyzing resume fit with specific references to skills, projects, and education."
         }},
         "technical_evaluation": {{
             "grade": "Excellent" | "Good" | "Average" | "Poor",
-            "reasoning": "3-5 sentences. Detailed analysis of MCQ performance, knowledge areas, strengths and gaps."
+            "reasoning": "4-5 sentences. Narrative paragraph citing exact Technical Score percentage and fraction, contrasting with resume claims."
         }},
         "coding_evaluation": {{
             "grade": "Excellent" | "Good" | "Average" | "Poor",
-            "reasoning": "3-5 sentences. Detailed analysis of coding problems solved, approach, and code quality."
+            "reasoning": "4-5 sentences. Narrative paragraph naming specific problems, their scores, any errors encountered, and overall coding ability."
         }},
         "soft_skills_evaluation": {{
             "grade": "Excellent" | "Good" | "Average" | "Poor",
-            "reasoning": "3-5 sentences. Detailed analysis of communication skills, clarity, and professionalism."
+            "reasoning": "4-5 sentences. Narrative paragraph referencing text assessment remarks and scores, explaining impact on teamwork and collaboration."
         }},
         "psychometric_evaluation": {{
             "grade": "Insight" | "Neutral",
-            "reasoning": "2-3 sentences. Brief personality insight - NOT a pass/fail judgment."
+            "reasoning": "2-3 sentences. Behavioral personality insight — NOT a pass/fail judgment."
         }},
         "integrity_observation": {{
             "status": "Acceptable" | "Observation",
-            "reasoning": "2-3 sentences. If score > 50, mark as Acceptable. If score < 50, note the observation but do NOT penalize."
+            "reasoning": "2-3 sentences. Factual description of any concerns, with explicit statement that it does not affect hiring decision."
         }},
         "final_decision": {{
              "status": "Hire" | "No Hire" | "Strong Hire" | "Consider for Future",
-             "summary": "4-6 sentences. Comprehensive final verdict synthesizing all evaluations. Do NOT penalize for integrity unless it's directly relevant to role requirements."
+             "summary": "5-7 sentences. Comprehensive final verdict naming the candidate, synthesizing all evaluations, explaining the decision, and providing a clear recommendation."
         }}
     }}
     """

@@ -95,7 +95,36 @@ export default function Assessment() {
   const [noFaceCount, setNoFaceCount] = useState(0);
   const [multipleFacesCount, setMultipleFacesCount] = useState(0);
 
-  // AI Proctoring Integration
+  // Assessment Timer (45 minutes = 2700 seconds)
+  const [timeLeft, setTimeLeft] = useState(2700);
+  const [timerActive, setTimerActive] = useState(true);
+
+  // Helper to format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Timer Logic
+  useEffect(() => {
+    if (!timerActive || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setTimerActive(false);
+          // Auto-submit logic or warning can go here
+          addLog('info', "Time's up! Submitting assessment...");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timerActive, timeLeft]);
   const {
     sessionId: proctorSessionId,
     isMonitoring,
@@ -946,9 +975,11 @@ export default function Assessment() {
 
           <div className="flex items-center gap-6">
             {/* Timer */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono text-sm font-medium tabular-nums">45:00</span>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border transition-colors ${timeLeft < 300 ? 'bg-destructive/10 border-destructive animate-pulse' : 'bg-background'}`}>
+              <Clock className={`h-4 w-4 ${timeLeft < 300 ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <span className={`font-mono text-sm font-medium tabular-nums ${timeLeft < 300 ? 'text-destructive' : ''}`}>
+                {formatTime(timeLeft)}
+              </span>
             </div>
 
             {/* Current Round Progress */}
