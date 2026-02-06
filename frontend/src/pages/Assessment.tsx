@@ -579,9 +579,12 @@ export default function Assessment() {
             await submitAllMCQAnswers();
             await completeCurrentRound();
             addLog('success', 'MCQ round completed! Moving to next round...');
+            setIsTransitioning(true);
+            setTransitionMessage('Preparing Psychometric Assessment...');
             setTimeout(() => {
               moveToNextRound();
-            }, 500);
+              setTimeout(() => setIsTransitioning(false), 500);
+            }, 2500);
           });
           setShowUnansweredWarning(true);
           return;
@@ -595,11 +598,11 @@ export default function Assessment() {
         setIsTransitioning(true);
         setTransitionMessage('Preparing Psychometric Assessment...');
 
-        // Move to next round immediately (evaluation happens in background)
+        // Move to next round after 2.5 seconds and hide transition
         setTimeout(() => {
-          setIsTransitioning(false);
           moveToNextRound();
-        }, 2000);
+          setTimeout(() => setIsTransitioning(false), 500);
+        }, 2500);
       }
       return;
     }
@@ -627,9 +630,12 @@ export default function Assessment() {
             await submitAllPsychometricAnswers();
             await completeCurrentRound();
             addLog('success', 'Psychometric assessment completed! Moving to next round...');
+            setIsTransitioning(true);
+            setTransitionMessage('Loading Text-Based Assessment...');
             setTimeout(() => {
               moveToNextRound();
-            }, 500);
+              setTimeout(() => setIsTransitioning(false), 500);
+            }, 2500);
           });
           setShowUnansweredWarning(true);
           return;
@@ -643,11 +649,11 @@ export default function Assessment() {
         setIsTransitioning(true);
         setTransitionMessage('Loading Text-Based Assessment...');
 
-        // Move to next round
+        // Move to next round after 2.5 seconds and hide transition
         setTimeout(() => {
-          setIsTransitioning(false);
           moveToNextRound();
-        }, 2000);
+          setTimeout(() => setIsTransitioning(false), 500);
+        }, 2500);
       }
       return;
     }
@@ -684,13 +690,8 @@ export default function Assessment() {
           await completeCurrentRound();
           addLog('success', 'Text-Based assessment completed! Moving to next round...');
           
-          setIsTransitioning(true);
-          setTransitionMessage('Preparing Coding Assessment...');
-          
-          setTimeout(() => {
-            setIsTransitioning(false);
-            moveToNextRound();
-          }, 2000);
+          // moveToNextRound() will handle the transition for coding
+          moveToNextRound();
         }
       } catch (error) {
         addLog('error', 'Failed to submit answer');
