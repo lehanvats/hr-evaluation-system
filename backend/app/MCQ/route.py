@@ -5,7 +5,7 @@ Handles MCQ question retrieval and answer submission with real-time scoring
 
 from flask import request, jsonify
 from . import MCQ
-from ..models import MCQQuestion, MCQResult, CandidateAuth as CandidateAuthModel
+from ..models import MCQQuestion, MCQAnswer, MCQResult, CandidateAuth as CandidateAuthModel
 from ..extensions import db
 from ..config import Config
 from ..auth_helpers import verify_candidate_token, verify_recruiter_token
@@ -162,6 +162,29 @@ def submit_mcq_answer():
         print(f"🔍 DEBUG - Selected: {selected_option}, Correct: {question.correct_answer}")
         print(f"🔍 DEBUG - Is Correct: {is_correct}")
         
+        # Check if answer already exists (prevent duplicate submissions)
+        existing_answer = MCQAnswer.query.filter_by(
+            candidate_id=candidate_id,
+            question_id=question_id
+        ).first()
+        
+        if existing_answer:
+            print(f"⚠️ Answer already exists for question {question_id}, updating...")
+            # Update existing answer
+            existing_answer.selected_option = selected_option
+            existing_answer.is_correct = is_correct
+            existing_answer.submitted_at = datetime.utcnow()
+        else:
+            # Store new individual answer
+            answer = MCQAnswer(
+                candidate_id=candidate_id,
+                question_id=question_id,
+                selected_option=selected_option,
+                is_correct=is_correct
+            )
+            db.session.add(answer)
+            print(f"💾 Stored new answer for question {question_id}")
+        
         # Get or create result record for this student
         result = MCQResult.query.filter_by(student_id=candidate_id).first()
         
@@ -175,36 +198,30 @@ def submit_mcq_answer():
             )
             db.session.add(result)
         else:
-            print(f"📝 Found existing MCQResult: correct={result.correct_answers}, wrong={result.wrong_answers}")
+            print(f"📝 Found existing MCQResult")
         
-        # Update tallies
-        # FIX: Reset scores if this is the FIRST question (ID 101)
-        # This prevents accumulation if candidate retakes the test
-        if question_id == 101:
-            print("🔄 First question submitted - Resetting previous scores")
-            result.correct_answers = 0
-            result.wrong_answers = 0
-            
-        if is_correct:
-            result.correct_answers += 1
-            print(f"✅ Incrementing correct_answers to {result.correct_answers}")
-        else:
-            result.wrong_answers += 1
-            print(f"❌ Incrementing wrong_answers to {result.wrong_answers}")
+        # RECALCULATE from stored answers to avoid race conditions
+        # This ensures accuracy even with concurrent submissions
+        all_answers = MCQAnswer.query.filter_by(candidate_id=candidate_id).all()
+        correct_count = sum(1 for a in all_answers if a.is_correct)
+        wrong_count = sum(1 for a in all_answers if not a.is_correct)
+        total_answered = len(all_answers)
         
-        # Calculate percentage
-        total_answered = result.correct_answers + result.wrong_answers
+        # Update result with accurate counts
+        result.correct_answers = correct_count
+        result.wrong_answers = wrong_count
+        
         if total_answered > 0:
-            result.percentage_correct = (result.correct_answers / total_answered) * 100
+            result.percentage_correct = (correct_count / total_answered) * 100
             
             # AI Grading
             try:
-                grading_result = evaluate_mcq_performance(result.correct_answers, total_answered)
+                grading_result = evaluate_mcq_performance(correct_count, total_answered)
                 result.grading_json = grading_result # Function now returns dict, no json.loads needed
             except Exception as e:
                 print(f"⚠️ AI Grading failed: {e}")
         
-        print(f"📊 New totals - Correct: {result.correct_answers}, Wrong: {result.wrong_answers}, Percentage: {result.percentage_correct}%")
+        print(f"📊 Recalculated totals - Correct: {result.correct_answers}, Wrong: {result.wrong_answers}, Total: {total_answered}, Percentage: {result.percentage_correct}%")
         
         # FIX: Update candidate's last active timestamp to ensure they bubble up in dashboard
         candidate = CandidateAuthModel.query.get(candidate_id)

@@ -86,6 +86,10 @@ export default function Assessment() {
   const [unansweredQuestionsList, setUnansweredQuestionsList] = useState<number[]>([]);
   const [pendingSubmitAction, setPendingSubmitAction] = useState<(() => void) | null>(null);
 
+  // Transition loading state
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionMessage, setTransitionMessage] = useState('');
+
   // AI Proctoring Integration
   const {
     sessionId: proctorSessionId,
@@ -426,28 +430,40 @@ export default function Assessment() {
 
       const answers = roundProgress.mcq.answers;
       let successCount = 0;
+      let failCount = 0;
 
-      // Submit all answers in background (don't wait for responses)
+      // Submit all answers and WAIT for all to complete
       const submissions = Object.entries(answers).map(async ([questionId, selectedOption]) => {
         try {
           const response = await mcqApi.submitAnswer(parseInt(questionId), selectedOption as number);
           if (!response.error) {
             successCount++;
+            console.log(`✅ Submitted answer for question ${questionId}`);
+          } else {
+            failCount++;
+            console.error(`❌ Failed to submit question ${questionId}:`, response.error);
           }
         } catch (error) {
-          console.error(`Failed to submit answer for question ${questionId}:`, error);
+          failCount++;
+          console.error(`❌ Exception submitting question ${questionId}:`, error);
         }
       });
 
-      // Don't wait for all to complete - let them run in background
-      Promise.all(submissions).then(() => {
-        console.log(`✅ MCQ evaluation complete: ${successCount}/${Object.keys(answers).length} submitted`);
-        addLog('success', `MCQ evaluation complete: ${successCount} answers processed`);
-      });
+      // WAIT for all submissions to complete before continuing
+      await Promise.all(submissions);
+      
+      const totalAnswers = Object.keys(answers).length;
+      console.log(`✅ MCQ evaluation complete: ${successCount}/${totalAnswers} submitted, ${failCount} failed`);
+      
+      if (failCount > 0) {
+        addLog('warning', `MCQ submission: ${successCount} succeeded, ${failCount} failed`);
+      } else {
+        addLog('success', `All ${successCount} MCQ answers submitted successfully`);
+      }
 
     } catch (error) {
       console.error('Error in batch submission:', error);
-      addLog('error', 'Some answers may not have been submitted');
+      addLog('error', 'Error submitting MCQ answers');
     } finally {
       setMcqSubmitting(false);
     }
@@ -511,6 +527,8 @@ export default function Assessment() {
       // If next round is coding, redirect to dedicated page (has complex UI with Monaco editor)
       if (nextRound === 'coding') {
         addLog('success', 'Moving to Coding Assessment...');
+        setIsTransitioning(true);
+        setTransitionMessage('Initializing Coding Environment...');
         setTimeout(() => {
           navigate('/candidate/coding-test');
         }, 1500);
@@ -574,10 +592,14 @@ export default function Assessment() {
         await completeCurrentRound();
         addLog('success', 'MCQ round completed! Moving to next round...');
 
+        setIsTransitioning(true);
+        setTransitionMessage('Preparing Psychometric Assessment...');
+
         // Move to next round immediately (evaluation happens in background)
         setTimeout(() => {
+          setIsTransitioning(false);
           moveToNextRound();
-        }, 500);
+        }, 2000);
       }
       return;
     }
@@ -618,10 +640,14 @@ export default function Assessment() {
         await completeCurrentRound();
         addLog('success', 'Psychometric assessment completed! Moving to next round...');
 
+        setIsTransitioning(true);
+        setTransitionMessage('Loading Text-Based Assessment...');
+
         // Move to next round
         setTimeout(() => {
+          setIsTransitioning(false);
           moveToNextRound();
-        }, 500);
+        }, 2000);
       }
       return;
     }
@@ -657,9 +683,14 @@ export default function Assessment() {
           await textBasedApi.complete();
           await completeCurrentRound();
           addLog('success', 'Text-Based assessment completed! Moving to next round...');
+          
+          setIsTransitioning(true);
+          setTransitionMessage('Preparing Coding Assessment...');
+          
           setTimeout(() => {
+            setIsTransitioning(false);
             moveToNextRound();
-          }, 500);
+          }, 2000);
         }
       } catch (error) {
         addLog('error', 'Failed to submit answer');
@@ -1004,6 +1035,38 @@ export default function Assessment() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Transition Loading Overlay */}
+      {isTransitioning && (
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="bg-card border border-border rounded-lg p-8 shadow-2xl max-w-md w-full mx-4">
+            <div className="flex flex-col items-center space-y-6">
+              {/* Animated spinner */}
+              <div className="relative">
+                <div className="h-16 w-16 rounded-full border-4 border-primary/20"></div>
+                <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+              </div>
+              
+              {/* Message */}
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-semibold text-foreground">
+                  {transitionMessage}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Please wait while we set up the next section
+                </p>
+              </div>
+              
+              {/* Progress dots */}
+              <div className="flex gap-2">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{animationDelay: '0.4s'}}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

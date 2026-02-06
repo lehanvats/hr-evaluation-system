@@ -109,6 +109,36 @@ class MCQQuestion(db.Model):
             data['correct_answer'] = self.correct_answer
         return data
 
+#====================== MCQ Answers (Individual) ============================
+class MCQAnswer(db.Model):
+    __tablename__ = 'mcq_answers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('mcq_questions.question_id'), nullable=False)
+    selected_option = db.Column(db.Integer, nullable=False)  # 1, 2, 3, or 4
+    is_correct = db.Column(db.Boolean, nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Composite unique constraint: One answer per question per candidate
+    __table_args__ = (
+        db.UniqueConstraint('candidate_id', 'question_id', name='unique_candidate_question'),
+    )
+    
+    # Relationships
+    candidate = db.relationship('CandidateAuth', backref=db.backref('mcq_answers'))
+    question = db.relationship('MCQQuestion', backref=db.backref('answers'))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'candidate_id': self.candidate_id,
+            'question_id': self.question_id,
+            'selected_option': self.selected_option,
+            'is_correct': self.is_correct,
+            'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None
+        }
+
 #====================== MCQ Results ============================
 class MCQResult(db.Model):
     __tablename__ = 'mcq_results'
