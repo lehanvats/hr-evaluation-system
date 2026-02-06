@@ -53,9 +53,9 @@ def verify_candidate_token():
 @ProctorService.route('/session/start', methods=['POST'])
 def start_session():
     try:
-        user_id, error = verify_candidate_token()
-        if error:
-            return error
+        user_id = verify_candidate_token()
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
             
         data = request.json or {}
         assessment_id = data.get('assessment_id')
@@ -91,9 +91,9 @@ def start_session():
 @ProctorService.route('/session/end', methods=['POST'])
 def end_session():
     try:
-        user_id, error = verify_candidate_token()
-        if error:
-            return error
+        user_id = verify_candidate_token()
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
             
         # Find active session for this user
         session = ProctorSession.query.filter_by(
@@ -105,16 +105,18 @@ def end_session():
             # If no active session, just return success (idempotent)
             return jsonify({'success': True, 'message': 'No active session found'})
             
-        # Get violation events array from request payload
+        # Get violation events and counts from payload
         violation_events = request.json.get('violation_events', [])
+        violation_counts_summary = request.json.get('violation_counts', {})
         
         # Verify it's a list (basic validation)
         if not isinstance(violation_events, list):
             violation_events = []
 
-        # Update session with detailed events
+        # Update session with detailed events and counts
         session.violation_counts = {
             'events': violation_events,
+            'summary': violation_counts_summary,
             'total_count': len(violation_events)
         }
         session.end_time = datetime.utcnow()
@@ -216,9 +218,9 @@ def log_violation():
 
 @ProctorService.route('/analyze-frame', methods=['POST'])
 def analyze_frame():
-    user_id, error = verify_candidate_token()
-    if error:
-        return error
+    user_id = verify_candidate_token()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
         
     data = request.json
     session_id = data.get('session_id')

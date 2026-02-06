@@ -10,14 +10,14 @@ import { WebcamMonitor } from '@/components/molecules/WebcamMonitor';
 import { ActivityMonitor } from '@/components/molecules/ActivityMonitor';
 import { useProctoring } from '@/hooks/useProctoring';
 import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection';
-import { useObjectDetection } from '@/hooks/useObjectDetection';
-import { 
-  Code, 
-  Play, 
-  Send, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+
+import {
+  Code,
+  Play,
+  Send,
+  CheckCircle,
+  XCircle,
+  Clock,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
@@ -87,7 +87,6 @@ const LANGUAGE_MAP: Record<string, { label: string; monacoLang: string }> = {
 
 export default function CodingTest() {
   const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [selectedProblem, setSelectedProblem] = useState<ProblemDetail | null>(null);
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
@@ -114,12 +113,12 @@ export default function CodingTest() {
   });
 
   // Client-Side Face Detection
-  const { stream } = useFaceDetection({
+  const { stream, videoRef } = useFaceDetection({
     enabled: isMonitoring,
     detectionInterval: 2000, // Check every 2 seconds
     onViolation: (event: ViolationEvent) => {
       const { type, details } = event;
-      
+
       // Map violation types to backend format
       const violationTypeMap: Record<string, string> = {
         'NO_FACE': 'no_face',
@@ -127,25 +126,16 @@ export default function CodingTest() {
         'FACE_TURNED': 'looking_away',
         'FACE_TOO_FAR': 'looking_away'
       };
-      
+
       const backendType = violationTypeMap[type] || type.toLowerCase();
-      
+
       console.log(`🚨 Face detection violation: ${backendType}`, details);
       toast.error(`Security Alert: ${details}`);
       logViolation(backendType, { event: type, details });
     }
   });
 
-  // Client-Side Phone Detection
-  useObjectDetection({
-    enabled: isMonitoring,
-    videoRef,
-    onViolation: (type, details) => {
-      console.log(`📱 Phone violation: ${type}`, details);
-      toast.error('Security Alert: Phone Detected!');
-      logViolation(type, details);
-    }
-  });
+
 
   // Fetch configuration and problems on mount
   useEffect(() => {
@@ -320,7 +310,7 @@ export default function CodingTest() {
         setTestResults(data.test_results);
         const passedCount = data.passed_count;
         const totalCount = data.total_count;
-        
+
         if (passedCount === totalCount) {
           toast.success(`All test cases passed! (${passedCount}/${totalCount})`);
         } else {
@@ -363,7 +353,7 @@ export default function CodingTest() {
 
       if (data.success) {
         setTestResults(data.test_results);
-        
+
         if (data.status === 'Accepted') {
           toast.success('Solution accepted! ✅ All test cases passed');
           // Refresh problems to update status
@@ -373,7 +363,7 @@ export default function CodingTest() {
         } else {
           toast.error(`Submission ${data.status} - ${data.passed_count}/${data.total_count} test cases passed`);
         }
-        
+
         // Refresh submissions
         fetchSubmissions(selectedProblem.problem_id);
       } else {
@@ -401,12 +391,12 @@ export default function CodingTest() {
       if (data.success) {
         // Stop proctoring session
         stopProctorSession();
-        
+
         toast.success('Assessment completed successfully! Thank you.');
-        
+
         // Clear authentication token
         localStorage.removeItem('candidate_token');
-        
+
         // Redirect to landing page immediately
         setTimeout(() => {
           navigate('/');
@@ -468,7 +458,7 @@ export default function CodingTest() {
               </>
             )}
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -497,11 +487,10 @@ export default function CodingTest() {
                     <div
                       key={problem.id}
                       onClick={() => setCurrentProblemIndex(index)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                        currentProblemIndex === index
-                          ? 'bg-primary/10 border-primary'
-                          : 'hover:bg-muted'
-                      }`}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${currentProblemIndex === index
+                        ? 'bg-primary/10 border-primary'
+                        : 'hover:bg-muted'
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -566,7 +555,7 @@ export default function CodingTest() {
                           {selectedProblem.description}
                         </pre>
                       </div>
-                      
+
                       {/* Test Cases Examples */}
                       {selectedProblem.test_cases && selectedProblem.test_cases.length > 0 && (
                         <div className="space-y-3 mt-4">
@@ -580,13 +569,13 @@ export default function CodingTest() {
                                 <div>
                                   <span className="text-xs font-medium">Input:</span>
                                   <pre className="text-xs mt-1 p-2 bg-background rounded border">
-{testCase.input}
+                                    {testCase.input}
                                   </pre>
                                 </div>
                                 <div>
                                   <span className="text-xs font-medium">Expected Output:</span>
                                   <pre className="text-xs mt-1 p-2 bg-background rounded border">
-{testCase.expected_output}
+                                    {testCase.expected_output}
                                   </pre>
                                 </div>
                               </div>
@@ -594,10 +583,10 @@ export default function CodingTest() {
                           ))}
                         </div>
                       )}
-                      
+
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Visible Test Cases: {selectedProblem.test_cases.length} | 
+                          Visible Test Cases: {selectedProblem.test_cases.length} |
                           Hidden Test Cases: {selectedProblem.hidden_test_cases_count}
                         </p>
                       </div>
@@ -666,7 +655,7 @@ export default function CodingTest() {
                   <TabsTrigger value="submissions" className="flex-1">Submissions</TabsTrigger>
                 </TabsList>
               </CardHeader>
-              
+
               <CardContent className="flex-1 overflow-hidden p-0">
                 <TabsContent value="results" className="h-full m-0">
                   <ScrollArea className="h-full">
@@ -679,11 +668,10 @@ export default function CodingTest() {
                         testResults.map((result) => (
                           <div
                             key={result.test_case_id}
-                            className={`p-4 rounded-lg border-2 ${
-                              result.passed 
-                                ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800' 
-                                : 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800'
-                            }`}
+                            className={`p-4 rounded-lg border-2 ${result.passed
+                              ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800'
+                              : 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800'
+                              }`}
                           >
                             <div className="flex items-start justify-between mb-3">
                               <span className="text-sm font-semibold">
@@ -715,11 +703,10 @@ export default function CodingTest() {
                                   </div>
                                   <div>
                                     <span className="font-semibold text-gray-700 dark:text-gray-300">Got:</span>
-                                    <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto border ${
-                                      result.passed 
-                                        ? 'bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-800' 
-                                        : 'bg-red-100 dark:bg-red-950/30 border-red-300 dark:border-red-800'
-                                    }`}>
+                                    <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto border ${result.passed
+                                      ? 'bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-800'
+                                      : 'bg-red-100 dark:bg-red-950/30 border-red-300 dark:border-red-800'
+                                      }`}>
                                       {result.actual_output || '(no output)'}
                                     </pre>
                                   </div>
@@ -740,7 +727,7 @@ export default function CodingTest() {
                     </div>
                   </ScrollArea>
                 </TabsContent>
-                
+
                 <TabsContent value="submissions" className="h-full m-0">
                   <ScrollArea className="h-full">
                     <div className="space-y-2 p-4">
@@ -753,7 +740,7 @@ export default function CodingTest() {
                           const isAccepted = submission.status === 'Accepted';
                           const isPartial = submission.status && submission.status.startsWith('Partial');
                           const scorePercentage = submission.score_percentage;
-                          
+
                           return (
                             <div key={submission.id} className="p-3 rounded-lg border">
                               <div className="flex items-start justify-between mb-2">
@@ -762,11 +749,10 @@ export default function CodingTest() {
                                     {submission.status}
                                   </Badge>
                                   {scorePercentage !== undefined && scorePercentage !== null && (
-                                    <span className={`text-xs font-semibold ${
-                                      scorePercentage === 100 ? 'text-green-600 dark:text-green-400' :
+                                    <span className={`text-xs font-semibold ${scorePercentage === 100 ? 'text-green-600 dark:text-green-400' :
                                       scorePercentage >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                                      'text-red-600 dark:text-red-400'
-                                    }`}>
+                                        'text-red-600 dark:text-red-400'
+                                      }`}>
                                       {scorePercentage.toFixed(1)}%
                                     </span>
                                   )}

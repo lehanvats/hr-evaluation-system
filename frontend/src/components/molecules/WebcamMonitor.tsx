@@ -48,7 +48,7 @@ export const WebcamMonitor = forwardRef<HTMLVideoElement, WebcamMonitorProps>(({
       icon: AlertCircle,
     },
     error: {
-      label: 'Connection Lost',
+      label: 'Session Error',
       color: 'text-destructive',
       bgColor: 'bg-destructive/10',
       borderColor: 'border-destructive/30',

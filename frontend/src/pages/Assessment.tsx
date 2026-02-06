@@ -31,7 +31,7 @@ import { Card } from '@/components/ui/card';
 import { mcqApi, candidateApi, psychometricApi, textBasedApi } from '@/lib/api';
 import { useProctoring } from '@/hooks/useProctoring';
 import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection';
-import { useObjectDetection } from '@/hooks/useObjectDetection';
+
 import { useCodePlayback } from '@/hooks/useCodePlayback';
 
 interface ConsoleLog {
@@ -51,15 +51,13 @@ export default function Assessment() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Create ref to access video element for object detection
-  const videoRef = useRef<HTMLVideoElement>(null);
+
 
   // Round Management State
   const [currentRound, setCurrentRound] = useState<AssessmentRound>('mcq');
   const [roundProgress, setRoundProgress] = useState<Record<AssessmentRound, RoundProgress>>({
     mcq: { round: 'mcq', status: 'in-progress', answers: {}, currentQuestionIndex: 0 },
     psychometric: { round: 'psychometric', status: 'not-started', answers: {} },
-    technical: { round: 'technical', status: 'not-started', answers: {} },
     'text-based': { round: 'text-based', status: 'not-started', answers: {} },
     coding: { round: 'coding', status: 'not-started', answers: {} }
   });
@@ -101,12 +99,12 @@ export default function Assessment() {
   });
 
   // Client-Side Face Detection
-  const { stream } = useFaceDetection({
+  const { stream, videoRef } = useFaceDetection({
     enabled: isMonitoring, // Only detect when session is active
     detectionInterval: 2000, // Check every 2 seconds
     onViolation: (event: ViolationEvent) => {
       const { type, details } = event;
-      
+
       // Map violation types to backend format
       const violationTypeMap: Record<string, string> = {
         'NO_FACE': 'no_face',
@@ -114,9 +112,9 @@ export default function Assessment() {
         'FACE_TURNED': 'looking_away',
         'FACE_TOO_FAR': 'looking_away'
       };
-      
+
       const backendType = violationTypeMap[type] || type.toLowerCase();
-      
+
       console.log(`🚨 Face detection violation: ${backendType}`, details);
       addLog('error', `Security Alert: ${details}`);
 
@@ -125,16 +123,7 @@ export default function Assessment() {
     }
   });
 
-  // Client-Side Phone Detection
-  useObjectDetection({
-    enabled: isMonitoring,
-    videoRef, // Pass shared ref
-    onViolation: (type, details) => {
-      console.log(`📱 Phone violation: ${type}`, details);
-      addLog('error', `Security Alert: Phone Detected!`);
-      logViolation(type, details);
-    }
-  });
+
 
   // Code Playback Recording  
   const { startRecording, stopRecording, recordChange } = useCodePlayback(
@@ -342,13 +331,9 @@ export default function Assessment() {
 
         if (candidateData.psychometric_completed) {
           updatedProgress.psychometric.status = 'completed';
-          activeRound = 'technical';
-        }
-
-        if (candidateData.technical_completed) {
-          updatedProgress.technical.status = 'completed';
           activeRound = 'text-based';
         }
+
 
         if (candidateData.text_based_completed) {
           updatedProgress['text-based'].status = 'completed';
@@ -663,7 +648,7 @@ export default function Assessment() {
         }
 
         addLog('success', 'Answer saved successfully');
-        
+
         // Move to next question or complete round
         if (currentQuestionIndex < totalQuestions - 1) {
           handleNext();

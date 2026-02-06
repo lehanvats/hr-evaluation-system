@@ -32,6 +32,7 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
 
     const startSession = useCallback(async () => {
         setIsMonitoring(true);
+        setStatus('active'); // Set status to active immediately to show UI
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             const response = await fetch(`${API_URL}/api/proctor/session/start`, {
@@ -50,7 +51,6 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
                 setSessionId(data.session_id);
                 // Reset events array on new session
                 violationEventsRef.current = [];
-                setStatus('active');
                 return data.session_id;
             } else {
                 setStatus('error');
@@ -72,8 +72,30 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
         }
 
         try {
+            // Calculate violation counts
+            const counts = {
+                no_face: 0,
+                multiple_faces: 0,
+                looking_away: 0,
+                phone_detected: 0,
+                tab_switch: 0,
+                mouse_exit: 0,
+                print_screen: 0,
+                copy_paste: 0
+            };
+
+            violationEventsRef.current.forEach(event => {
+                // Map backend types if necessary, or assume they match
+                const type = event.type as keyof typeof counts;
+                if (counts[type] !== undefined) {
+                    counts[type]++;
+                }
+            });
+
             // Send all violation events to backend
             console.log('📝 Submitting Proctored Session. Total Events:', violationEventsRef.current.length);
+            console.table(counts);
+
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             await fetch(`${API_URL}/api/proctor/session/end`, {
                 method: 'POST',
@@ -83,7 +105,8 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
                 },
                 body: JSON.stringify({
                     session_id: sessionId,
-                    violation_events: violationEventsRef.current // Send the detailed events array
+                    violation_events: violationEventsRef.current, // Send the detailed events array
+                    violation_counts: counts // Send aggregated counts
                 })
             });
 
@@ -95,7 +118,7 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
 
     const logViolation = useCallback(async (violationType: string, violationData: any) => {
         if (!sessionId) {
-            console.warn(`[Proctor Warning] Attempted to log '${violationType}' but sessionId is missing!`);
+            // Silently ignore violations if session hasn't started yet (avoids race conditions)
             return;
         }
 
@@ -105,7 +128,7 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
             timestamp: new Date().toISOString(),
             details: violationData
         };
-        
+
         violationEventsRef.current.push(event);
         console.log(`[Proctor Event Logged] ${violationType} at ${event.timestamp}`);
     }, [sessionId]);
