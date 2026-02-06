@@ -808,16 +808,17 @@ def get_candidates():
                     counts = raw_data
                     
                 # Deduct points based on counts from JSON
-                # Weights: Phone/Face (High) = -15, Tab/Look (Medium) = -8
+                # Weights: Face/Screen (High) = -15, Tab/Mouse (Medium) = -8
                 
                 # High Severity
-                fairplay_score -= (counts.get('phone_detected', 0) * 15)
                 fairplay_score -= (counts.get('multiple_faces', 0) * 15)
                 fairplay_score -= (counts.get('no_face', 0) * 15)
+                fairplay_score -= (counts.get('print_screen', 0) * 15)
                 
                 # Medium Severity
                 fairplay_score -= (counts.get('tab_switch', 0) * 8)
-                fairplay_score -= (counts.get('looking_away', 0) * 8)
+                fairplay_score -= (counts.get('copy_paste', 0) * 8)
+                fairplay_score -= (counts.get('mouse_exit', 0) * 5)
                 
             fairplay_score = max(0, fairplay_score)  # Don't go below 0
             
@@ -1096,8 +1097,6 @@ def get_candidate_detail(candidate_id):
             multiple_faces = counts.get('multiple_faces', 0)
             mouse_exit = counts.get('mouse_exit', 0)
             tab_switch = counts.get('tab_switch', 0)
-            looking_away = counts.get('looking_away', 0)
-            phone_detected = counts.get('phone_detected', 0)
             print_screen = counts.get('print_screen', 0)
             copy_paste = counts.get('copy_paste', 0)
             
@@ -1109,7 +1108,6 @@ def get_candidate_detail(candidate_id):
             # - SEVERE (Auto-Flag, Major Deduction):
             #     * Multiple Faces >= 2
             #     * No Face >= 15 (camera not capturing face for extended period)
-            #     * Phone Detected >= 1 (any phone = serious cheating attempt)
             #     * Print Screen >= 2 (attempt to capture questions)
             # 
             # - MODERATE (Warning, Medium Deduction):
@@ -1119,9 +1117,9 @@ def get_candidate_detail(candidate_id):
             #     * Copy/Paste >= 3
             # 
             # - LIGHT (Minor, Small Deduction):
-            #     * Looking Away >= 10
             #     * Mouse Exit 1-9
             #     * Tab Switch 1-4
+            #     * No Face 1-9
             #
             # FORMULA:
             # Base Score = 100
@@ -1141,8 +1139,6 @@ def get_candidate_detail(candidate_id):
                 severe_flags += 1
             if no_face >= 15:
                 severe_flags += 1
-            if phone_detected >= 1:
-                severe_flags += 1
             if print_screen >= 2:
                 severe_flags += 1
             
@@ -1159,8 +1155,6 @@ def get_candidate_detail(candidate_id):
                 moderate_flags += 1
             
             # Check LIGHT conditions
-            if looking_away >= 10:
-                light_flags += 1
             if 1 <= mouse_exit < 10:
                 light_flags += 1
             if 1 <= tab_switch < 5:
@@ -1209,7 +1203,7 @@ def get_candidate_detail(candidate_id):
                     formatted_ts = ts_str[:8] if ts_str else 'N/A'
                 
                 # Assign severity based on event type and thresholds
-                if etype in ['phone_detected', 'print_screen']:
+                if etype == 'print_screen':
                     evt_severity = 'high'
                 elif etype == 'multiple_faces':
                     evt_severity = 'high' if multiple_faces >= 2 else 'medium'
