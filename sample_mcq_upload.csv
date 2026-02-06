@@ -1,0 +1,11 @@
+question_id,question,option1,option2,option3,option4,correct_answer
+101,"What is the capital of France?",Paris,London,Berlin,Madrid,1
+102,"Which programming language is known for web development?",Python,JavaScript,C++,Java,2
+103,"What is 5 + 7?",10,11,12,13,3
+104,"Who wrote 'Romeo and Juliet'?",Charles Dickens,Jane Austen,William Shakespeare,Mark Twain,3
+105,"What is the largest planet in our solar system?",Earth,Mars,Jupiter,Saturn,3
+106,"Which data structure uses LIFO principle?",Queue,Stack,Array,Tree,2
+107,"What does HTML stand for?",Hyper Text Markup Language,High Tech Modern Language,Home Tool Markup Language,Hyperlinks and Text Markup Language,1
+108,"What is the result of 10 / 2?",3,4,5,6,3
+109,"Which is a relational database?",MongoDB,Redis,PostgreSQL,Cassandra,3
+110,"What HTTP status code indicates 'Not Found'?",200,301,404,500,3
