@@ -115,7 +115,7 @@ class MCQAnswer(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False)
-    question_id = db.Column(db.Integer, db.ForeignKey('mcq_questions.question_id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('mcq_questions.question_id', ondelete='CASCADE'), nullable=False)
     selected_option = db.Column(db.Integer, nullable=False)  # 1, 2, 3, or 4
     is_correct = db.Column(db.Boolean, nullable=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -127,7 +127,7 @@ class MCQAnswer(db.Model):
     
     # Relationships
     candidate = db.relationship('CandidateAuth', backref=db.backref('mcq_answers'))
-    question = db.relationship('MCQQuestion', backref=db.backref('answers'))
+    question = db.relationship('MCQQuestion', backref=db.backref('answers', cascade='all, delete-orphan'))
     
     def to_dict(self):
         return {
@@ -287,7 +287,7 @@ class TextBasedAnswer(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('candidate_auth.id'), nullable=False)
-    question_id = db.Column(db.Integer, db.ForeignKey('text_based_questions.question_id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('text_based_questions.question_id', ondelete='CASCADE'), nullable=False)
     answer = db.Column(db.Text, nullable=False)  # The candidate's answer text
     word_count = db.Column(db.Integer, nullable=False)  # Word count of the answer
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -295,7 +295,7 @@ class TextBasedAnswer(db.Model):
     
     # Relationships
     candidate = db.relationship('CandidateAuth', backref=db.backref('text_based_answers'))
-    question = db.relationship('TextBasedQuestion', backref=db.backref('answers'))
+    question = db.relationship('TextBasedQuestion', backref=db.backref('answers', cascade='all, delete-orphan'))
     
     # Unique constraint: one answer per student per question
     __table_args__ = (db.UniqueConstraint('student_id', 'question_id', name='_student_question_uc'),)

@@ -30,6 +30,7 @@ import Settings from "@/pages/admin/Settings";
 import PsychometricManagement from "@/pages/admin/PsychometricManagement";
 import EvaluationCriteria from "@/pages/admin/EvaluationCriteria";
 import CodingManagement from "@/pages/admin/CodingManagement";
+import QuestionBank from "@/pages/admin/QuestionBank";
 
 // Other
 import NotFound from "@/pages/NotFound";
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="psychometric" element={<PsychometricManagement />} />
               <Route path="evaluation-criteria" element={<EvaluationCriteria />} />
               <Route path="coding" element={<CodingManagement />} />
+              <Route path="question-bank" element={<QuestionBank />} />
               <Route path="candidate/:id" element={<CandidateDetail />} />
               <Route path="settings" element={<Settings />} />
             </Route >

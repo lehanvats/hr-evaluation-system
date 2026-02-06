@@ -71,7 +71,7 @@ export default function CandidateDetail() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/recruiter-dashboard/candidates/${candidateId}`, {
+      const response = await fetch(`http://localhost:5000/api/recruiter/candidates/${candidateId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

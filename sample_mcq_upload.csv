@@ -1,11 +1,61 @@
 question_id,question,option1,option2,option3,option4,correct_answer
-101,"What is the capital of France?",Paris,London,Berlin,Madrid,1
-102,"Which programming language is known for web development?",Python,JavaScript,C++,Java,2
-103,"What is 5 + 7?",10,11,12,13,3
-104,"Who wrote 'Romeo and Juliet'?",Charles Dickens,Jane Austen,William Shakespeare,Mark Twain,3
-105,"What is the largest planet in our solar system?",Earth,Mars,Jupiter,Saturn,3
-106,"Which data structure uses LIFO principle?",Queue,Stack,Array,Tree,2
-107,"What does HTML stand for?",Hyper Text Markup Language,High Tech Modern Language,Home Tool Markup Language,Hyperlinks and Text Markup Language,1
-108,"What is the result of 10 / 2?",3,4,5,6,3
-109,"Which is a relational database?",MongoDB,Redis,PostgreSQL,Cassandra,3
-110,"What HTTP status code indicates 'Not Found'?",200,301,404,500,3
+201,"SCENARIO: Your team is working on a critical project with a tight deadline. Two days before the delivery, you discover a significant bug that could take 8-10 hours to fix properly. A quick workaround exists but may cause issues later. Your manager is unaware of this problem.
+
+QUESTION: What is the BEST course of action?",Implement the quick workaround and deliver on time without mentioning the issue,Immediately inform your manager about the bug and recommend extending the deadline,Fix the bug overnight without telling anyone to avoid blame,Document the workaround and plan to fix it in the next sprint,2
+202,"SCENARIO: During a team meeting, your colleague presents an idea that you recognize as very similar to a solution you shared informally with them last week. They don't acknowledge your contribution, and your manager seems impressed.
+
+QUESTION: How should you handle this situation?",Interrupt immediately and publicly call out that it was your idea,Wait until after the meeting and privately discuss this with your colleague,Send an email to your manager afterward claiming credit for the idea,Let it go to maintain team harmony and avoid confrontation,2
+203,"SCENARIO: You're assigned to work with a remote team member who consistently misses deadlines and doesn't respond to messages promptly. This is affecting your own deliverables and causing frustration.
+
+QUESTION: What is the MOST professional approach?",Complain about them to your manager and request a different team member,Schedule a one-on-one video call to understand their challenges and discuss expectations,Start documenting every instance to build a case against them,Work around them and complete their tasks yourself to meet deadlines,2
+204,"SCENARIO: During code review, a senior developer harshly criticizes your work in front of the entire team, using phrases like 'amateur mistake' and 'waste of time.' You believe some criticism is valid but the delivery was unprofessional.
+
+QUESTION: What should you do FIRST?",Defend your approach and point out the senior developer's past mistakes,Thank them for the feedback and request a private follow-up discussion to learn more,Report them to HR immediately for creating a hostile work environment,Ignore the criticism and avoid interacting with them in the future,2
+205,"SCENARIO: You discover that a legacy system you maintain has a security vulnerability that could expose customer data. Fixing it properly would require significant refactoring (3-4 weeks). No breach has occurred yet, and management is focused on new features.
+
+QUESTION: What is your PRIMARY responsibility?",Continue with assigned feature work since no breach has occurred,Immediately escalate the security issue to management with a detailed risk assessment,Fix the vulnerability in your spare time without disrupting the schedule,Wait for the security team to discover it during their next audit,2
+206,"SCENARIO: Your company is downsizing and you learn through unofficial channels that your department will have layoffs next month. A close colleague just bought a house and asks you if you've heard anything about job security.
+
+QUESTION: How should you respond?",Share what you heard so they can prepare financially,Deny knowing anything to avoid spreading rumors,Acknowledge you've heard rumors but suggest they speak with management directly,Tell them everything will be fine to ease their worries,3
+207,"SCENARIO: You're in an interview loop for a candidate. The candidate's technical skills are excellent, but during lunch, they made several inappropriate jokes and comments that made you uncomfortable. Other interviewers seemed to overlook this.
+
+QUESTION: What should you include in your feedback?",Give a strong technical hire recommendation and don't mention the behavioral concerns,Provide detailed feedback on both technical skills AND the concerning behavioral observations,Give a rejection recommendation based solely on the behavioral issues,Give a neutral score to avoid getting involved in non-technical matters,2
+208,"SCENARIO: Your manager asks you to inflate time estimates for a client project because 'they can afford it' and it will give the team more breathing room. You know the work can be done in the timeframe you originally estimated.
+
+QUESTION: What is the most ethical response?",Inflate the estimates as requested since your manager knows the business better,Refuse directly and report your manager to upper management,Discuss your concerns privately with your manager and advocate for honest estimates,Provide the inflated estimates but secretly finish early to look good,3
+209,"SCENARIO: You're leading a project when a team member reveals they need to take immediate family leave for two weeks due to a medical emergency. This will significantly impact your timeline, and your manager is already concerned about delays.
+
+QUESTION: What is the BEST leadership approach?",Ask them to work remotely during their leave to minimize impact,Express support for their leave and work with the team to redistribute tasks and adjust timeline,Suggest they use vacation days instead of family leave to maintain flexibility,Report the situation to your manager and let them handle the staffing issue,2
+210,"SCENARIO: During a product demo to stakeholders, you notice that a feature is incorrectly displaying inflated metrics that make the results look much better than reality. The client seems very impressed and ready to sign a major contract.
+
+QUESTION: What should you do IMMEDIATELY?",Point out the error during the demo to correct the misleading information,Stay quiet during the demo and report the issue to your team afterward,Wait until after the meeting to privately inform your manager,Document the error but let the sales team handle client communication,1
+211,"SCENARIO: You join a new team and discover they have no code reviews, minimal testing, and frequently deploy directly to production on Fridays. When you suggest improvements, the team says 'this is how we've always done it' and they meet their deadlines.
+
+QUESTION: What is the most effective approach to drive change?",Organize a team meeting to formally present all the problems with their current process,Start implementing better practices in your own work and demonstrate the value through results,Go directly to management to report the risky development practices,Follow their existing process since you're new and don't want to cause friction,2
+212,"SCENARIO: A client requests a feature that you know would create technical debt and maintainability issues. Your sales team has already promised it to close the deal, and your manager is pressuring you to give a timeline.
+
+QUESTION: What is the BEST technical leadership response?",Refuse to implement it and tell your manager to renegotiate with the client,Provide a timeline with caveats about technical debt and propose a better alternative approach,Give them the timeline they want to keep everyone happy,Agree to do it but document everything to protect yourself later,2
+213,"SCENARIO: You're working remotely and realize you accidentally pushed sensitive API keys and credentials to a public GitHub repository 3 hours ago. No alerts have been triggered yet.
+
+QUESTION: What is your FIRST action?",Delete the commit and hope no one noticed,Immediately revoke/rotate all exposed credentials and notify your security team,Remove the repository from GitHub temporarily while you fix it,Update the commit history to remove the credentials,2
+214,"SCENARIO: During a sprint planning meeting, your manager assigns you a task that requires skills you don't have and would take significant time to learn. They seem to assume you can do it, and everyone is watching for your response.
+
+QUESTION: How should you respond in the meeting?",Accept the task confidently and figure it out later to avoid looking incompetent,Immediately decline and explain you don't have the necessary skills,Accept the task but mention you'll need time to learn and ask about resources or mentoring,Suggest someone else would be better suited for this task,3
+215,"SCENARIO: Your company is bidding on a project and asks you to assess technical feasibility in 24 hours. After reviewing, you believe the proposed timeline is unrealistic and would require significant corners to be cut.
+
+QUESTION: What should you communicate to leadership?",Provide a cautiously optimistic assessment to help win the bid,Give an honest technical assessment including the risks of the proposed timeline,Tell them it's feasible to support the business goals,Recommend not bidding on the project since it's not achievable,2
+216,"SCENARIO: You're in a salary negotiation for a new role. The recruiter asks what you currently make. You're currently underpaid compared to market rate, and disclosing this might anchor the offer lower.
+
+QUESTION: What is the most professional response?",Inflate your current salary to get a better offer,Deflect by asking about their budget range for the role,Tell them your current salary honestly,Refuse to answer due to salary history ban laws,2
+217,"SCENARIO: A cross-functional project requires input from the design team, but the lead designer is consistently missing meetings and not delivering mockups on time. This is blocking your development work.
+
+QUESTION: What is the most constructive approach?",Document the delays and escalate to their manager,Proceed with development using your best guess for design,Set up a direct meeting with the designer to understand blockers and establish a working agreement,Publicly call out the delays in the next team standup,3
+218,"SCENARIO: You're asked to interview internal candidates for a promotion on your team. One candidate is your friend who you know has been struggling with personal issues affecting their work quality recently.
+
+QUESTION: How should you handle this?",Give them favorable feedback to help your friend,Recuse yourself from the interview process due to personal relationship and bias,Provide honest professional feedback based on their work performance,Give neutral feedback to avoid influencing the decision either way,2
+219,"SCENARIO: During an on-call shift at 2 AM, you're alerted to a production issue affecting 5% of users. Quick analysis shows you can either: roll back to a stable version (5 min, causes 10 min downtime) or attempt a forward fix (30-45 min, no downtime needed but uncertain).
+
+QUESTION: What is the safest production decision?",Attempt the forward fix to avoid downtime and customer complaints,Roll back immediately to restore service and investigate the fix during business hours,Wait until morning to get team input before making a decision,Try the forward fix first and rollback if it doesn't work quickly,2
+220,"SCENARIO: Your startup is running out of funding and the CTO asks you to evaluate switching to cheaper cloud infrastructure to cut costs. This would require significant migration work and might reduce reliability.
+
+QUESTION: What is your responsibility as an engineer?",Advocate strongly against the move to maintain quality,Provide objective analysis of costs benefits risks and timeline for both staying and migrating,Immediately start planning the migration since leadership has decided,Suggest alternative cost-cutting measures instead,2

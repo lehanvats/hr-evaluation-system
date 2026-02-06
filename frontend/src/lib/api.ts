@@ -137,7 +137,7 @@ export const recruiterApi = {
     const token = localStorage.getItem('recruiterToken');
     if (!token) return { data: null, error: 'Auth required' };
 
-    return request(`/recruiter-dashboard/candidates/${candidateId}/analyze`, {
+    return request(`/api/recruiter/candidates/${candidateId}/analyze`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -151,7 +151,7 @@ export const recruiterApi = {
 export const adminApi = {
   /** Get all candidates */
   getCandidates: async () => {
-    return request('/recruiter-dashboard/candidates'); // Corrected this one too while I'm here as it probably was /api/admin
+    return request('/api/recruiter/candidates');
   },
 
   /** Get single candidate details */

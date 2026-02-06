@@ -60,30 +60,29 @@ export function AssessmentInput({
             );
         }
         
-        // Regular MCQ with radio buttons
+        // Regular MCQ with radio buttons - optimized for scenario-based questions
         return (
-            <div className="h-full flex flex-col p-6 max-w-2xl mx-auto w-full">
-                <h3 className="text-lg font-medium mb-6">Select the best answer:</h3>
+            <div className="h-full flex flex-col p-6 max-w-3xl mx-auto w-full">
                 <RadioGroup
                     value={answer?.toString()}
                     onValueChange={(val) => onAnswerChange(question.options[0]?.id ? val : parseInt(val))}
-                    className="space-y-4"
+                    className="space-y-3"
                 >
                     {question.options.map((option) => {
                         const optionId = option.id.toString();
                         const isSelected = answer?.toString() === optionId;
                         
                         return (
-                            <div key={optionId} className="flex items-center space-x-2">
+                            <div key={optionId} className="flex items-start space-x-2">
                                 <RadioGroupItem value={optionId} id={optionId} className="peer sr-only" />
                                 <Label
                                     htmlFor={optionId}
-                                    className="flex items-center w-full p-4 rounded-lg border-2 border-muted bg-card hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
+                                    className="flex items-start w-full p-4 rounded-lg border-2 border-muted bg-card hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
                                 >
-                                    <div className="w-5 h-5 rounded-full border border-primary mr-3 flex items-center justify-center">
+                                    <div className="w-5 h-5 rounded-full border border-primary mr-3 mt-0.5 flex-shrink-0 flex items-center justify-center">
                                         {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                                     </div>
-                                    <span className="text-base">{option.text}</span>
+                                    <span className="text-base leading-relaxed">{option.text}</span>
                                 </Label>
                             </div>
                         );

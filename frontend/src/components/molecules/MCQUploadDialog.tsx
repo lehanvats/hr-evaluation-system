@@ -179,7 +179,9 @@ export default function MCQUploadDialog({
         <DialogHeader>
           <DialogTitle>Upload MCQ Questions</DialogTitle>
           <DialogDescription>
-            Upload CSV/Excel file with columns: question_id, question, option1, option2, option3, option4, correct_answer (1-4)
+            Upload scenario-based MCQ questions in CSV/Excel format. Questions should present workplace situations followed by problem-solving options.
+            <br /><br />
+            Required columns: question_id, question, option1, option2, option3, option4, correct_answer (1-4)
           </DialogDescription>
         </DialogHeader>
 
@@ -314,8 +316,11 @@ export default function MCQUploadDialog({
               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Download sample CSV
+              Download Scenario-Based Sample CSV
             </a>
+            <p className="text-xs text-muted-foreground mt-2">
+              Format: Each question includes a workplace scenario followed by a problem-solving question
+            </p>
           </div>
         </div>
 

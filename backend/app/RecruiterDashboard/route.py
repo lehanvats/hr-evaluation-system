@@ -5,7 +5,7 @@ Handles all recruiter dashboard operations
 
 from flask import request, jsonify
 from . import RecruiterDashboard
-from ..models import CandidateAuth, MCQQuestion, EvaluationCriteria, ProctorSession, MCQResult, PsychometricResult, TextAssessmentResult, CandidateRationale, CodingAssessmentResult
+from ..models import CandidateAuth, MCQQuestion, MCQAnswer, EvaluationCriteria, ProctorSession, MCQResult, PsychometricResult, TextAssessmentResult, CandidateRationale, CodingAssessmentResult
 from ..extensions import db
 from ..config import Config
 from ..auth_helpers import verify_recruiter_token
@@ -257,19 +257,32 @@ def upload_mcq_questions():
                 'success': False,
                 'message': f'Missing columns: {", ".join(missing_columns)}'
             }), 400
-                # Delete all existing MCQ questions before inserting new ones
-        # Note: MCQ doesn't have an answers table, candidate selections are stored in CandidateAuth.mcq_score
+        
+        # Delete all existing MCQ data before inserting new questions
+        # Order matters: delete answers first, then results, then questions
         try:
-            deleted_count = MCQQuestion.query.delete()
+            # Delete all MCQ answers first (they reference questions)
+            answers_deleted = MCQAnswer.query.delete()
+            print(f"\n✅ Deleted {answers_deleted} existing MCQ answers")
+            
+            # Delete all MCQ results (they don't reference questions directly, but become meaningless)
+            results_deleted = MCQResult.query.delete()
+            print(f"✅ Deleted {results_deleted} existing MCQ results")
+            
+            # Now safe to delete questions
+            questions_deleted = MCQQuestion.query.delete()
+            print(f"✅ Deleted {questions_deleted} existing MCQ questions")
+            
             db.session.commit()
-            print(f"\n✅ Deleted {deleted_count} existing MCQ questions")
+            print(f"✅ Successfully cleared all existing MCQ data")
         except Exception as e:
             db.session.rollback()
             return jsonify({
                 'success': False,
-                'message': f'Error deleting existing questions: {str(e)}'
+                'message': f'Error deleting existing data: {str(e)}'
             }), 500
-                # Process questions
+        
+        # Process questions
         results = {
             'total': len(df),
             'created': 0,
@@ -765,8 +778,26 @@ def get_candidates():
             # Psychometric is NOT included in overall score anymore
             
             # Calculate fairplay score (from Proctoring Violations)
-            # Fetch latest session for candidate
-            session = ProctorSession.query.filter_by(candidate_id=candidate.id).order_by(ProctorSession.start_time.desc()).first()
+            # Query for the most recent COMPLETED session that has violation data
+            sessions = ProctorSession.query.filter_by(
+                candidate_id=candidate.id,
+                status='completed'
+            ).order_by(ProctorSession.start_time.desc()).all()
+            
+            session = None
+            # Find the most recent session with actual violation data
+            for s in sessions:
+                if s.violation_counts and isinstance(s.violation_counts, dict):
+                    events = s.violation_counts.get('events', [])
+                    total_count = s.violation_counts.get('total_count', 0)
+                    if events or total_count > 0:
+                        session = s
+                        break
+            
+            # If no session with violations found, use the most recent one anyway
+            if not session and sessions:
+                session = sessions[0]
+            
             fairplay_score = 100  # Start with perfect score
             
             if session and session.violation_counts:
@@ -1019,13 +1050,40 @@ def get_candidate_detail(candidate_id):
                 soft_skill_score = 0
         
         # Get Proctoring violations from ProctorSession.violation_counts JSON
-        session = ProctorSession.query.filter_by(candidate_id=candidate.id).order_by(ProctorSession.start_time.desc()).first()
+        # Query for the most recent COMPLETED session that has violation data
+        sessions = ProctorSession.query.filter_by(
+            candidate_id=candidate.id,
+            status='completed'
+        ).order_by(ProctorSession.start_time.desc()).all()
+        
+        session = None
+        # Find the most recent session with actual violation data
+        for s in sessions:
+            if s.violation_counts and isinstance(s.violation_counts, dict):
+                events = s.violation_counts.get('events', [])
+                total_count = s.violation_counts.get('total_count', 0)
+                if events or total_count > 0:
+                    session = s
+                    break
+        
+        # If no session with violations found, use the most recent one anyway
+        if not session and sessions:
+            session = sessions[0]
+        
         fairplay_score = 100
         integrity_logs = []
         integrity_status = "Clean"  # Clean, Moderate, Severe
         
         if session and session.violation_counts:
             raw_data = session.violation_counts
+            
+            # Ensure raw_data is a dict (handle if it's a string)
+            if isinstance(raw_data, str):
+                import json
+                try:
+                    raw_data = json.loads(raw_data)
+                except:
+                    raw_data = {}
             
             # Get summary counts for fairplay score calculation
             if "summary" in raw_data:

@@ -1,11 +1,10 @@
 question_id,question,option1,option2,option3,option4,correct_answer
-101,"What is the capital of France?",Paris,London,Berlin,Madrid,1
-102,"Which programming language is known for web development?",Python,JavaScript,C++,Java,2
-103,"What is 5 + 7?",10,11,12,13,3
-104,"Who wrote 'Romeo and Juliet'?",Charles Dickens,Jane Austen,William Shakespeare,Mark Twain,3
-105,"What is the largest planet in our solar system?",Earth,Mars,Jupiter,Saturn,3
-106,"Which data structure uses LIFO principle?",Queue,Stack,Array,Tree,2
-107,"What does HTML stand for?",Hyper Text Markup Language,High Tech Modern Language,Home Tool Markup Language,Hyperlinks and Text Markup Language,1
-108,"What is the result of 10 / 2?",3,4,5,6,3
-109,"Which is a relational database?",MongoDB,Redis,PostgreSQL,Cassandra,3
-110,"What HTTP status code indicates 'Not Found'?",200,301,404,500,3
+201,"SCENARIO: Your team is working on a critical project with a tight deadline. Two days before the delivery, you discover a significant bug that could take 8-10 hours to fix properly. A quick workaround exists but may cause issues later. Your manager is unaware of this problem.
+
+QUESTION: What is the BEST course of action?",Implement the quick workaround and deliver on time without mentioning the issue,Immediately inform your manager about the bug and recommend extending the deadline,Fix the bug overnight without telling anyone to avoid blame,Document the workaround and plan to fix it in the next sprint,2
+202,"SCENARIO: During a team meeting, your colleague presents an idea that you recognize as very similar to a solution you shared informally with them last week. They don't acknowledge your contribution, and your manager seems impressed.
+
+QUESTION: How should you handle this situation?",Interrupt immediately and publicly call out that it was your idea,Wait until after the meeting and privately discuss this with your colleague,Send an email to your manager afterward claiming credit for the idea,Let it go to maintain team harmony and avoid confrontation,2
+203,"SCENARIO: You're assigned to work with a remote team member who consistently misses deadlines and doesn't respond to messages promptly. This is affecting your own deliverables and causing frustration.
+
+QUESTION: What is the MOST professional approach?",Complain about them to your manager and request a different team member,Schedule a one-on-one video call to understand their challenges and discuss expectations,Start documenting every instance to build a case against them,Work around them and complete their tasks yourself to meet deadlines,2

@@ -14,12 +14,14 @@ import {
   Brain,
   Scale,
   Code,
+  LibraryBig,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/admin/dashboard', icon: BarChart3, label: 'Dashboard' },
   { to: '/admin/candidates', icon: Users, label: 'Candidates' },
+  { to: '/admin/question-bank', icon: LibraryBig, label: 'Question Bank' },
   { to: '/admin/psychometric', icon: Brain, label: 'Psychometric' },
   { to: '/admin/coding', icon: Code, label: 'Coding Problems' },
   { to: '/admin/evaluation-criteria', icon: Scale, label: 'Evaluation Criteria' },

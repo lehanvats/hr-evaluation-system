@@ -199,6 +199,19 @@ export default function MCQTest() {
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
+  // Helper function to parse scenario and question
+  const parseQuestion = (questionText: string) => {
+    const scenarioMatch = questionText.match(/SCENARIO:(.+?)(?=QUESTION:)/s);
+    const questionMatch = questionText.match(/QUESTION:(.+)/s);
+    
+    return {
+      scenario: scenarioMatch ? scenarioMatch[1].trim() : null,
+      question: questionMatch ? questionMatch[1].trim() : questionText
+    };
+  };
+
+  const { scenario, question: questionPart } = parseQuestion(currentQuestion.question);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -229,8 +242,25 @@ export default function MCQTest() {
             <Badge variant="outline" className="mb-4">
               Question {currentQuestion.question_id}
             </Badge>
-            <h2 className="text-xl font-semibold leading-relaxed">
-              {currentQuestion.question}
+            
+            {/* Scenario Section */}
+            {scenario && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-4 border-blue-500">
+                <div className="flex items-start gap-2 mb-2">
+                  <Badge className="bg-blue-500">SCENARIO</Badge>
+                </div>
+                <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300">
+                  {scenario}
+                </p>
+              </div>
+            )}
+            
+            {/* Question Section */}
+            <div className="flex items-start gap-2 mb-3">
+              <Badge className="bg-primary">QUESTION</Badge>
+            </div>
+            <h2 className="text-xl font-semibold leading-relaxed mb-4">
+              {questionPart}
             </h2>
           </div>
 

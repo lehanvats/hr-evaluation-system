@@ -736,12 +736,31 @@ export default function Assessment() {
   const getProblemViewerProps = () => {
     // Handle MCQ questions from API (different format)
     if (currentRound === 'mcq' && mcqQuestions.length > 0) {
+      // Parse scenario-based question format
+      const parseQuestion = (questionText: string) => {
+        const scenarioMatch = questionText.match(/SCENARIO:(.+?)(?=QUESTION:)/s);
+        const questionMatch = questionText.match(/QUESTION:(.+)/s);
+        
+        if (scenarioMatch && questionMatch) {
+          return {
+            scenario: scenarioMatch[1].trim(),
+            question: questionMatch[1].trim()
+          };
+        }
+        return { scenario: null, question: questionText };
+      };
+
+      const { scenario, question } = parseQuestion(currentQuestion.question);
+      
       return {
         problemTitle: `Question ${currentQuestion.question_id}`,
-        problemDescription: currentQuestion.question,
+        problemDescription: scenario 
+          ? `**SCENARIO:**\n\n${scenario}\n\n**QUESTION:**\n\n${question}`
+          : currentQuestion.question,
         instructions: [
-          "Select the best option from the available choices.",
-          "Your answer will be checked immediately after submission."
+          "Read the workplace scenario carefully",
+          "Select the BEST course of action from the options",
+          "Consider professional ethics and effective problem-solving"
         ]
       };
     }

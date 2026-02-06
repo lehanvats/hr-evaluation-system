@@ -38,7 +38,7 @@ def create_app():
     
     # Recruiter dashboard routes (separate from auth)
     from .RecruiterDashboard import RecruiterDashboard
-    app.register_blueprint(RecruiterDashboard, url_prefix='/recruiter-dashboard')
+    app.register_blueprint(RecruiterDashboard, url_prefix='/api/recruiter')
     
     # Resume management routes
     from .Resume import Resume
