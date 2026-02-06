@@ -31,6 +31,7 @@ import { Card } from '@/components/ui/card';
 import { mcqApi, candidateApi, psychometricApi, textBasedApi } from '@/lib/api';
 import { useProctoring } from '@/hooks/useProctoring';
 import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection';
+import { useAudioDetection } from '@/hooks/useAudioDetection';
 
 import { useCodePlayback } from '@/hooks/useCodePlayback';
 
@@ -124,6 +125,16 @@ export default function Assessment() {
 
       // Log to backend
       logViolation(backendType, { event: type, details });
+    }
+  });
+
+  // Client-Side Audio Detection
+  useAudioDetection({
+    enabled: isMonitoring,
+    threshold: 40,
+    checkInterval: 2000,
+    onViolation: (details) => {
+      console.log('Audio Check:', details); // Explicitly requested console log
     }
   });
 
@@ -451,10 +462,10 @@ export default function Assessment() {
 
       // WAIT for all submissions to complete before continuing
       await Promise.all(submissions);
-      
+
       const totalAnswers = Object.keys(answers).length;
       console.log(`✅ MCQ evaluation complete: ${successCount}/${totalAnswers} submitted, ${failCount} failed`);
-      
+
       if (failCount > 0) {
         addLog('warning', `MCQ submission: ${successCount} succeeded, ${failCount} failed`);
       } else {
@@ -689,7 +700,7 @@ export default function Assessment() {
           await textBasedApi.complete();
           await completeCurrentRound();
           addLog('success', 'Text-Based assessment completed! Moving to next round...');
-          
+
           // moveToNextRound() will handle the transition for coding
           moveToNextRound();
         }
@@ -740,7 +751,7 @@ export default function Assessment() {
       const parseQuestion = (questionText: string) => {
         const scenarioMatch = questionText.match(/SCENARIO:(.+?)(?=QUESTION:)/s);
         const questionMatch = questionText.match(/QUESTION:(.+)/s);
-        
+
         if (scenarioMatch && questionMatch) {
           return {
             scenario: scenarioMatch[1].trim(),
@@ -751,10 +762,10 @@ export default function Assessment() {
       };
 
       const { scenario, question } = parseQuestion(currentQuestion.question);
-      
+
       return {
         problemTitle: `Question ${currentQuestion.question_id}`,
-        problemDescription: scenario 
+        problemDescription: scenario
           ? `**SCENARIO:**\n\n${scenario}\n\n**QUESTION:**\n\n${question}`
           : currentQuestion.question,
         instructions: [
@@ -1066,7 +1077,7 @@ export default function Assessment() {
                 <div className="h-16 w-16 rounded-full border-4 border-primary/20"></div>
                 <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
               </div>
-              
+
               {/* Message */}
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-semibold text-foreground">
@@ -1076,12 +1087,12 @@ export default function Assessment() {
                   Please wait while we set up the next section
                 </p>
               </div>
-              
+
               {/* Progress dots */}
               <div className="flex gap-2">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.4s' }}></div>
               </div>
             </div>
           </div>

@@ -10,6 +10,7 @@ import { WebcamMonitor } from '@/components/molecules/WebcamMonitor';
 import { ActivityMonitor } from '@/components/molecules/ActivityMonitor';
 import { useProctoring } from '@/hooks/useProctoring';
 import { useFaceDetection, ViolationEvent } from '@/hooks/useFaceDetection';
+import { useAudioDetection } from '@/hooks/useAudioDetection';
 
 import {
   Code,
@@ -132,6 +133,16 @@ export default function CodingTest() {
       console.log(`🚨 Face detection violation: ${backendType}`, details);
       toast.error(`Security Alert: ${details}`);
       logViolation(backendType, { event: type, details });
+    }
+  });
+
+  // Client-Side Audio Detection
+  useAudioDetection({
+    enabled: isMonitoring,
+    threshold: 40,
+    checkInterval: 2000,
+    onViolation: (details) => {
+      console.log('Audio Check:', details); // Explicitly requested console log
     }
   });
 
