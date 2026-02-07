@@ -36,7 +36,7 @@ import { useAudioDetection } from '@/hooks/useAudioDetection';
 import { useCodePlayback } from '@/hooks/useCodePlayback';
 
 interface ConsoleLog {
-  type: 'log' | 'error' | 'info' | 'success';
+  type: 'log' | 'error' | 'info' | 'success' | 'warning';
   message: string;
   timestamp: Date;
 }
@@ -174,7 +174,10 @@ export default function Assessment() {
     threshold: 40,
     checkInterval: 2000,
     onViolation: (details) => {
-      console.log('Audio Check:', details); // Explicitly requested console log
+      console.log('Audio Check:', details);
+      // Log audio violation to backend
+      logViolation('suspicious_noise', { level: details.level });
+      addLog('warning', `Audio Alert: Suspicious noise detected (Level: ${typeof details.level === 'number' ? details.level.toFixed(2) : 'Unknown'})`);
     }
   });
 

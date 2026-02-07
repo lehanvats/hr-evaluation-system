@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ConsoleOutputProps {
-  logs: Array<{ type: 'log' | 'error' | 'info' | 'success'; message: string; timestamp: Date }>;
+  logs: Array<{ type: 'log' | 'error' | 'info' | 'success' | 'warning'; message: string; timestamp: Date }>;
   onClear: () => void;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
 }
 
-export function ConsoleOutput({ 
-  logs, 
-  onClear, 
+export function ConsoleOutput({
+  logs,
+  onClear,
   isExpanded = false,
-  onToggleExpand 
+  onToggleExpand
 }: ConsoleOutputProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +29,8 @@ export function ConsoleOutput({
     switch (type) {
       case 'error':
         return 'text-destructive';
+      case 'warning':
+        return 'text-warning';
       case 'success':
         return 'text-success';
       case 'info':
@@ -42,6 +44,8 @@ export function ConsoleOutput({
     switch (type) {
       case 'error':
         return '✗';
+      case 'warning':
+        return '⚠';
       case 'success':
         return '✓';
       case 'info':
@@ -92,7 +96,7 @@ export function ConsoleOutput({
       </div>
 
       {/* Console Output */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-auto p-3 font-mono text-xs space-y-1"
       >

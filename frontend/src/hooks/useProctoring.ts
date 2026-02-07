@@ -81,7 +81,8 @@ export function useProctoring({ assessmentId, onViolation }: UseProctoringProps 
                 tab_switch: 0,
                 mouse_exit: 0,
                 print_screen: 0,
-                copy_paste: 0
+                copy_paste: 0,
+                suspicious_noise: 0
             };
 
             violationEventsRef.current.forEach(event => {
