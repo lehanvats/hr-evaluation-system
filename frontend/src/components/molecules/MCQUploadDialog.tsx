@@ -127,7 +127,7 @@ export default function MCQUploadDialog({
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('http://localhost:5000/api/recruiter/mcq/upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/recruiter/mcq/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

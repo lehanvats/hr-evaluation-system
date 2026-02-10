@@ -82,7 +82,7 @@ export default function ResumeUpload({ currentResume, onUploadSuccess }: ResumeU
       const formData = new FormData();
       formData.append('resume', selectedFile);
 
-      const response = await fetch('http://localhost:5000/api/resume/upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/resume/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

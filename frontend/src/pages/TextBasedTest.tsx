@@ -94,7 +94,7 @@ export default function TextBasedTest() {
       console.log('📥 Fetching text-based questions...');
       setLoading(true);
       const token = localStorage.getItem('candidate_token');
-      const response = await fetch('http://localhost:5000/api/text-based/questions', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/questions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -142,7 +142,7 @@ export default function TextBasedTest() {
       // Fallback to normal loading if not preloaded
       console.log('📥 Fetching text-based answers...');
       const token = localStorage.getItem('candidate_token');
-      const response = await fetch('http://localhost:5000/api/text-based/answers', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/answers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -196,7 +196,7 @@ export default function TextBasedTest() {
 
     try {
       const token = localStorage.getItem('candidate_token');
-      const response = await fetch('http://localhost:5000/api/text-based/submit', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +287,7 @@ export default function TextBasedTest() {
     setIsCompleting(true);
     try {
       const token = localStorage.getItem('candidate_token');
-      const response = await fetch('http://localhost:5000/api/text-based/complete', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

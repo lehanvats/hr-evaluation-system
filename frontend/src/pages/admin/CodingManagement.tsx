@@ -74,7 +74,7 @@ export default function CodingManagement() {
     try {
       setLoading(true);
       const token = localStorage.getItem('recruiterToken');
-      const response = await fetch('http://localhost:5000/api/code/admin/problems', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/code/admin/problems`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -127,7 +127,7 @@ export default function CodingManagement() {
 
     try {
       const token = localStorage.getItem('recruiterToken');
-      const response = await fetch('http://localhost:5000/api/code/admin/problems', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/code/admin/problems`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -175,7 +175,7 @@ export default function CodingManagement() {
     setLoadingSamples(true);
     try {
       const token = localStorage.getItem('recruiterToken');
-      const response = await fetch('http://localhost:5000/api/code/admin/import/scan', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/code/admin/import/scan`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -228,7 +228,7 @@ export default function CodingManagement() {
     setImporting(true);
     try {
       const token = localStorage.getItem('recruiterToken');
-      const response = await fetch('http://localhost:5000/api/code/admin/import/batch', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/code/admin/import/batch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

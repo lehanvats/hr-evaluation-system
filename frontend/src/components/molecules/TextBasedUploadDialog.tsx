@@ -87,7 +87,7 @@ export default function TextBasedUploadDialog({
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('http://localhost:5000/api/text-based/upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

@@ -58,7 +58,7 @@ export default function MCQTest() {
       const token = localStorage.getItem('candidate_token');
       
       // Preload questions
-      const questionsResponse = await fetch('http://localhost:5000/api/text-based/questions', {
+      const questionsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/questions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -74,7 +74,7 @@ export default function MCQTest() {
       }
 
       // Preload existing answers
-      const answersResponse = await fetch('http://localhost:5000/api/text-based/answers', {
+      const answersResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/text-based/answers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
