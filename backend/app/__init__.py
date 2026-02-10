@@ -4,6 +4,7 @@ from flask_cors import CORS
 from .extensions import db
 from .config import Config
 import os
+import re
 
 
 def create_app():
@@ -13,9 +14,11 @@ def create_app():
     app.config.from_object(Config)
     
     # Enable CORS for all routes (allow frontend to communicate)
-    # In production, you can restrict origins to your Vercel domain
-    # Example: origins=["https://your-app.vercel.app", "http://localhost:8080"]
-    allowed_origins = os.getenv("FRONTEND_URL", "*").split(",") if os.getenv("FRONTEND_URL") else "*"
+    # Allow all Vercel deployments (production, preview, and branch deployments)
+    allowed_origins = [
+        r"https://.*-kpranats-projects\.vercel\.app",  # All Vercel preview/branch deployments
+        r"http://localhost:\d+",  # Local development on any port
+    ]
     CORS(app, 
          origins=allowed_origins, 
          supports_credentials=True,

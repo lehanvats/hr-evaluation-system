@@ -17,8 +17,6 @@ services:
         generateValue: true
       - key: JWT_EXP_MINUTES
         value: 1440
-      - key: FRONTEND_URL
-        value: https://hr-evaluation-system-psi.vercel.app
       # Add your Supabase and Groq API keys in Render dashboard
 
 databases:
