@@ -13,25 +13,21 @@ def create_app():
     # Load configuration from Config class
     app.config.from_object(Config)
     
-    # Enable CORS for all routes (allow frontend to communicate)
-    # Custom origin validator to allow all Vercel deployments and localhost
-    def is_allowed_origin(origin):
-        if not origin:
-            return False
-        # Allow all Vercel deployments for this project (production, preview, branch)
-        if re.match(r"https://hr-evaluation-system.*\.vercel\.app$", origin):
-            return True
-        # Allow localhost on any port
-        if re.match(r"http://localhost:\d+$", origin):
-            return True
-        return False
+    # Enable CORS with manual handling for better control
+    from flask import request
     
-    CORS(app, 
-         origins=is_allowed_origin,
-         supports_credentials=True,
-         allow_headers=["Content-Type", "Authorization"], 
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         expose_headers=["Content-Type", "Authorization"])
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin:
+            # Allow all Vercel deployments and localhost
+            if 'vercel.app' in origin or 'localhost' in origin:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+        return response
     
     # PostgreSQL config (override if needed for SSL)
     if app.config["SQLALCHEMY_DATABASE_URI"]:
